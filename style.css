@@ -1,0 +1,24 @@
+*{box-sizing:border-box;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+html,body{margin:0;height:100%;background:#1b1020;font-family:system-ui,sans-serif;color:#fff}
+#wrap{position:relative;width:min(100vw,calc(100vh*16/9));aspect-ratio:16/9;margin:0 auto;top:50%;transform:translateY(-50%);border:4px solid #f5a300;border-radius:8px;overflow:hidden;background:#000}
+#game{width:100%;height:100%;display:block}
+.panel{position:absolute;inset:0;background:rgba(20,8,16,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;text-align:center;overflow:auto}
+.hidden{display:none}
+h1{margin:0;color:#ffc933;font-size:clamp(24px,6vw,48px)}
+h2{margin:0}
+p{margin:2px}
+.hint{opacity:.7;font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+button{font:inherit;padding:8px 14px;border:0;border-radius:10px;background:#444;color:#fff;cursor:pointer}
+button.big{background:#5cc437;font-weight:700;font-size:1.1em}
+#roster{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-height:45%;overflow:auto}
+.card{background:#2c1a30;border:3px solid transparent;border-radius:10px;padding:4px 6px;cursor:pointer;font-size:13px;position:relative}
+.card.sel{border-color:#ffc933}
+.card canvas{display:block;margin:0 auto}
+.card .edit{position:absolute;top:2px;right:2px;padding:0 5px;font-size:12px;border-radius:6px}
+#editor{flex-direction:row;flex-wrap:wrap;gap:12px}
+#editor h2{width:100%}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;text-align:left;font-size:14px}
+.form label{display:flex;justify-content:space-between;gap:6px;align-items:center}
+.form input[type=text],.form input:not([type]),.form select{width:110px}
+#editor .row{width:100%}

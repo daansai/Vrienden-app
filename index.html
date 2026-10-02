@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Vrienden Run</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="800" height="450"></canvas>
+
+  <div id="menu" class="panel">
+    <h1>Vrienden Run</h1>
+    <p>Kies je poppetje en ren door de grot!</p>
+    <div id="roster"></div>
+    <div class="row">
+      <button id="btnPlay" class="big">Spelen</button>
+      <button id="btnNew">+ Nieuwe vriend</button>
+    </div>
+    <p class="hint">Springen: ↑ / spatie / rechterknop &nbsp; Bukken: ↓ / linkerknop</p>
+    <p id="best"></p>
+  </div>
+
+  <div id="editor" class="panel hidden">
+    <h2>Maak je vriend na</h2>
+    <canvas id="preview" width="160" height="180"></canvas>
+    <div class="form">
+      <label>Naam <input id="fName" maxlength="12" placeholder="Naam"></label>
+      <label>Huid <input id="fSkin" type="color"></label>
+      <label>Haarkleur <input id="fHair" type="color"></label>
+      <label>Kapsel
+        <select id="fStyle">
+          <option value="short">Kort</option>
+          <option value="spiky">Piekerig</option>
+          <option value="long">Lang</option>
+          <option value="bun">Knotje</option>
+          <option value="mohawk">Hanenkam</option>
+          <option value="bald">Kaal</option>
+        </select>
+      </label>
+      <label>Shirt <input id="fShirt" type="color"></label>
+      <label>Broek <input id="fPants" type="color"></label>
+      <label>Bril <input id="fGlasses" type="checkbox"></label>
+      <label>Hoed
+        <select id="fHat"><option value="none">Geen</option><option value="cap">Pet</option><option value="top">Hoge hoed</option><option value="beanie">Muts</option></select>
+      </label>
+    </div>
+    <div class="row">
+      <button id="btnSave" class="big">Opslaan</button>
+      <button id="btnDelete">Verwijderen</button>
+      <button id="btnCancel">Terug</button>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
