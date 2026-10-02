@@ -9,67 +9,55 @@
 <body>
 <div id="wrap">
   <canvas id="game" width="800" height="450"></canvas>
-
-  <div id="menu" class="panel">
-    <h1>Vrienden Run</h1>
-    <p>Kies je spel en je poppetje!</p>
-    <div class="row" id="modes">
-      <button class="mode" data-mode="1"><b>Spel 1</b><br>Groene flesjes 🍾<br><small>sneller tempo</small></button>
-      <button class="mode" data-mode="2"><b>Spel 2</b><br>Wijnglazen 🍷<br><small>rustiger tempo</small></button>
-    </div>
-    <div id="roster"></div>
-    <div class="row">
-      <button id="btnPlay" class="big">Spelen</button>
-      <button id="btnNew">+ Nieuwe vriend</button>
-    </div>
-    <p class="hint">Springen: ↑ / spatie / rechterknop &nbsp; Bukken: ↓ / linkerknop</p>
-    <p id="best"></p>
-  </div>
-
   <div id="over" class="panel hidden">
-    <h1>Flauwgevallen! 😵</h1>
+    <h1 id="overTitle">Flauwgevallen!</h1>
     <p id="overScore"></p>
+    <p id="overDrink" class="drink"></p>
     <div class="row">
       <button id="btnAgain" class="big">Opnieuw spelen</button>
       <button id="btnHome">Hoofdmenu</button>
     </div>
   </div>
+</div>
 
-  <div id="editor" class="panel hidden">
-    <h2>Maak je vriend na</h2>
-    <canvas id="preview" width="160" height="180"></canvas>
-    <div class="form">
-      <label>Naam <input id="fName" maxlength="12" placeholder="Naam"></label>
-      <label>Man / vrouw
-        <select id="fGender"><option value="m">Man</option><option value="f">Vrouw</option></select>
-      </label>
-      <label>Huid <input id="fSkin" type="color"></label>
-      <label>Haarkleur <input id="fHair" type="color"></label>
-      <label>Kapsel
-        <select id="fStyle">
-          <option value="short">Kort</option>
-          <option value="spiky">Piekerig</option>
-          <option value="long">Lang</option>
-          <option value="bun">Knotje</option>
-          <option value="mohawk">Hanenkam</option>
-          <option value="ponytail">Paardenstaart</option>
-          <option value="bald">Kaal</option>
-        </select>
-      </label>
-      <label>Shirt <input id="fShirt" type="color"></label>
-      <label>Broek <input id="fPants" type="color"></label>
-      <label>Bril <input id="fGlasses" type="checkbox"></label>
-      <label>Hoed
-        <select id="fHat"><option value="none">Geen</option><option value="cap">Pet</option><option value="top">Hoge hoed</option><option value="beanie">Muts</option></select>
-      </label>
+<div id="menu" class="panel full">
+  <h1>Vrienden Run</h1>
+  <p>Drink je glas leeg en ren door het café!</p>
+  <div class="row" id="modes">
+    <button class="mode" data-mode="1"><b>Spel 1: Bier</b><br>Pak groene bierflesjes, je pint wordt leger<br><small>sneller tempo</small></button>
+    <button class="mode" data-mode="2"><b>Spel 2: Wijn</b><br>Pak wijnglazen, je wijnglas wordt leger<br><small>rustiger tempo</small></button>
+  </div>
+  <p class="hint">Een shotje vult je glas weer een beetje bij. Is je glas leeg, dan win je. Raak je iets anders, dan val je flauw.</p>
+  <div id="roster"></div>
+  <div class="row">
+    <button id="btnPlay" class="big">Spelen</button>
+    <button id="btnNew">+ Nieuwe vriend</button>
+  </div>
+  <p class="hint">Springen: ↑ / spatie / rechterkant &nbsp; Bukken: ↓ / linkerkant &nbsp; Tip: draai je telefoon op zijn kant.</p>
+  <p id="best"></p>
+</div>
+
+<div id="editor" class="panel full hidden">
+  <h2>Maak je vriend na</h2>
+  <div class="edwrap">
+    <div class="pv">
+      <canvas id="preview" width="240" height="320"></canvas>
+      <div class="row" id="poseBtns">
+        <button data-pose="run" class="sel">Rennen</button>
+        <button data-pose="idle">Staan</button>
+        <button data-pose="duck">Bukken</button>
+        <button data-pose="jump">Springen</button>
+      </div>
     </div>
-    <div class="row">
-      <button id="btnSave" class="big">Opslaan</button>
-      <button id="btnDelete">Verwijderen</button>
-      <button id="btnCancel">Terug</button>
-    </div>
+    <div id="form"></div>
+  </div>
+  <div class="row">
+    <button id="btnSave" class="big">Opslaan</button>
+    <button id="btnDelete">Verwijderen</button>
+    <button id="btnCancel">Terug</button>
   </div>
 </div>
+<script src="character.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
