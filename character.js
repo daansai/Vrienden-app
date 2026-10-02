@@ -12,6 +12,7 @@ const OPT = {
   top: [['tshirt', 'T-shirt'], ['long', 'Trui / lange mouw'], ['hoodie', 'Hoodie'], ['blazer', 'Colbert'], ['tank', 'Hemdje'], ['dress', 'Jurk']],
   posture: [['upright', 'Kaarsrecht'], ['normal', 'Normaal'], ['slouch', 'Voorovergebogen']],
   bottom: [['jeans', 'Jeans'], ['chinos', 'Nette broek'], ['shorts', 'Korte broek'], ['skirt', 'Rok']],
+  drink: [['beer', 'Bier 🍺'], ['wine', 'Wijn 🍷']],
   hat: [['none', 'Geen'], ['cap', 'Pet'], ['beanie', 'Muts'], ['top', 'Hoge hoed']]
 };
 const SKIN = ['#fbe2cf', '#f3cfae', '#e6b48c', '#cf9a6b', '#b27846', '#8a5836', '#6a4028', '#47291a'];
@@ -19,7 +20,7 @@ const HAIR = ['#0e0a08', '#2a1a10', '#4a2e1a', '#7a4a24', '#a9702f', '#d6a84f', 
 const EYES = ['#3b2414', '#7a5a2a', '#4a8a55', '#3b78a8', '#7d9bb0', '#555555'];
 
 const BLANK = {
-  name: '', gender: 'm', height: 'normal', build: 'normal', skin: SKIN[2], eyes: EYES[0],
+  name: '', drink: 'beer', gender: 'm', height: 'normal', build: 'normal', skin: SKIN[2], eyes: EYES[0],
   style: 'short', hair: HAIR[2], beard: 'none', glasses: 'none',
   top: 'tshirt', topColor: '#3b82f6', bottom: 'jeans', bottomColor: '#2f4a7a', shoes: '#f1f1f1', hat: 'none',
   face: '', posture: 'normal', hump: 0, chest: 50, belly: 50, butt: 50 // houding, bochel (0-100), borst/buik/billen (50 = gemiddeld)
