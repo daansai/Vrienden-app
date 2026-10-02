@@ -17,6 +17,7 @@
       <h1 id="overTitle">Flauwgevallen!</h1>
       <p id="overScore"></p>
       <p id="overDrink" class="drink"></p>
+      <p id="overSips" class="sips"></p>
       <div id="overBoard" class="board"></div>
       <div class="row">
         <button id="btnAgain" class="big">Opnieuw spelen</button>
@@ -37,8 +38,13 @@
     <div id="roster"></div>
     <button id="btnNew" class="ghost">+ Nieuwe speler maken</button>
   </section>
+  <section class="step">
+    <h3>Moeilijkheid</h3>
+    <div class="chips" id="diffs"><button class="chip" data-diff="easy">Makkelijk</button><button class="chip" data-diff="normal">Normaal</button><button class="chip" data-diff="hard">Moeilijk</button></div>
+    <p class="hint" id="diffHint"></p>
+  </section>
   <button id="btnPlay" class="big cta">Spelen</button>
-  <p class="hint">Bier: groene flesjes, wijn: wijnglazen, cocktail: cocktailglazen (loopt het langzaamst leeg). Een shotje vult je glas weer bij. Is je glas leeg, dan win je. Haal je de 3000 meter of val je flauw, dan moet je opdrinken wat er nog in zit.</p>
+  <p class="hint">Bier: groene flesjes, wijn: wijnglazen, cocktail: cocktailglazen (loopt het langzaamst leeg). Een shotje vult je glas weer bij. Is je glas leeg, dan win je. Haal je de 3000 meter of val je flauw, dan moet je opdrinken wat er nog in zit. Pak je een gouden drankje, dan mag je aan het einde slokken uitdelen.</p>
   <p class="hint">Springen: ↑ / spatie / rechterkant &nbsp;·&nbsp; Bukken: ↓ / linkerkant &nbsp;·&nbsp; Tip: draai je telefoon op zijn kant</p>
   <p id="best" class="best"></p>
 </div>

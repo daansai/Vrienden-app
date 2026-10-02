@@ -97,3 +97,6 @@ input[type=range]{width:100%;accent-color:#ffc933}
   #poseBtns button{padding:5px 9px;font-size:13px}
 }
 .fld .sw .cust{width:30px;height:30px;padding:0;border:2px solid rgba(255,255,255,.35);border-radius:50%;background:none}
+.sips{font-size:clamp(15px,3vw,22px);font-weight:800;color:#2a1608;background:linear-gradient(#ffe27a,#e0a02a);padding:6px 14px;border-radius:12px;box-shadow:0 2px 0 #8a5a00}
+.sips:empty{display:none}
+#diffs{justify-content:center}

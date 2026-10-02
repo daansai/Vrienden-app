@@ -5,10 +5,12 @@ Een renspel door een bruin café, in de stijl van Kaasje / de Chrome dino-game. 
 - **3000 meter:** elk spel stopt bij de finish. Is je glas dan nog niet leeg, dan moet je opdrinken wat er nog in zit.
 - **Shotjes** die voorbij komen vullen je glas weer een beetje bij. Easteregg: elk derde shotje vult het hele glas.
 - **Glas leeg = gewonnen.** Raak je een obstakel, dan val je flauw en moet je opdrinken wat er nog in je glas zit.
+- **Moeilijkheid:** makkelijk, normaal of moeilijk (tempo, ruimte tussen obstakels, hoe snel je glas leegloopt en hoe vaak achtervolgers komen).
+- **Gouden drankje:** af en toe vliegt er een gouden drankje sneller voorbij. Elke pakt telt als één slok die je aan het einde van je run mag uitdelen.
 - **Meerdere spelers:** maak voor iedereen een eigen poppetje, tik op wie er meedoen en speel om de beurt. Na de laatste speler zie je wie het meest moet drinken.
 - **Open vat:** af en toe staat er een open wijnvat (wijndrinkers) of biervat (bierdrinkers). Cocktaildrinkers krijgen een reuzecocktail. Spring er van boven in en je komt 250 meter lang in een wijnkelder, brouwerij of cocktailbar. Bukken in de lucht laat je meteen naar beneden gaan. Tegen de zijkant aan lopen is gevaarlijk.
 - **Per omgeving andere obstakels:** de tafels, lampen, kratten, vaten, scherven en paaltjes zien er in elke omgeving anders uit (café, dansvloer, wijnkelder, brouwerij, cocktailbar).
-- **Achtervolgers:** een beveiliger, een boze vrouw met een deegroller en een heel dikke man in zijn onderbroek rennen om de beurt achter je aan. Ze ontwijken eerst 2 tot 5 obstakels voordat ze struikelen.
+- **Achtervolgers:** een beveiliger, een boze vrouw met een deegroller en een heel dikke man in zijn onderbroek rennen om de beurt achter je aan en roepen iets anders bij bier, wijn of cocktail. Ze ontwijken eerst 2 tot 5 obstakels voordat ze struikelen.
 - **Omgeving:** lange tafels waar je op kunt springen (met flesjes erop), verkeerspaaltjes om overheen te springen,  elke 150 m een dansvloer met discobal.
 - **Poppetjes-maker:** tabs met grote keuzeknoppen, kleurstaaltjes met eigen kleur en een 🎲-knop voor een willekeurig poppetje. Echte stoffen: denim met stiksels en omgeslagen pijpen, jersey, tricot, fleece, wol en katoen.
 - **Eerder:** man/vrouw, lengte, postuur, houding, bochel, borst, buik, billen, huid, ogen, kapsel, baard, bril, kleding, schoenen, hoofddeksel en een foto van je eigen gezicht (blijft alleen op je apparaat).

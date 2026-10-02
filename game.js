@@ -19,7 +19,16 @@ let selectedId = store.get('selected', friends[0].id);
 let mode = 1; // 1 = bier, 2 = wijn: volgt het drankje van de speler die aan de beurt is
 const DRINK_ICON = { 1: '🍺', 2: '🍷', 3: '🍹' };
 const FINISH = 3000; // elk spel stopt na 3000 meter
-const bestKey = () => 'best' + mode;
+// moeilijkheid: tempo, ruimte tussen obstakels, hoe snel het glas leeg gaat, hoe vaak achtervolgers komen en hoe vaak er goud langs vliegt
+const DIFFS = {
+  easy: { name: 'Makkelijk', speed: 0.82, gap: 1.3, drain: 1.3, chase: 1.4, gold: 0.7, hint: 'Rustiger tempo, meer ruimte tussen obstakels en je glas loopt sneller leeg.' },
+  normal: { name: 'Normaal', speed: 1, gap: 1, drain: 1, chase: 1, gold: 1, hint: 'Zoals het bedoeld is.' },
+  hard: { name: 'Moeilijk', speed: 1.15, gap: 0.85, drain: 0.8, chase: 0.7, gold: 1.4, hint: 'Sneller, minder ruimte, je glas loopt langzamer leeg en er komen vaker achtervolgers.' }
+};
+let diff = store.get('diff', 'normal'); if (!DIFFS[diff]) diff = 'normal';
+const D = () => DIFFS[diff];
+const bestKeyFor = m => 'best' + m + (diff === 'normal' ? '' : '_' + diff);
+const bestKey = () => bestKeyFor(mode);
 let best = store.get(bestKey(), 0);
 
 // drain = hoeveel van het glas er per flesje/wijnglas uitgaat, refill = hoeveel een shotje bijvult
@@ -51,8 +60,10 @@ function renderRoster() {
     r.appendChild(d);
   }
   $('btnPlay').textContent = chosen.length > 1 ? `Spelen met ${chosen.length} spelers` : 'Spelen';
-  const b1 = store.get('best1', 0), b2 = store.get('best2', 0), b3 = store.get('best3', 0);
-  $('best').textContent = (b1 || b2 || b3) ? `Highscores: 🍺 ${b1} m · 🍷 ${b2} m · 🍹 ${b3} m` : '';
+  const b1 = store.get(bestKeyFor(1), 0), b2 = store.get(bestKeyFor(2), 0), b3 = store.get(bestKeyFor(3), 0);
+  $('best').textContent = (b1 || b2 || b3) ? `Highscores (${D().name}): 🍺 ${b1} m · 🍷 ${b2} m · 🍹 ${b3} m` : '';
+  document.querySelectorAll('#diffs .chip').forEach(b => b.classList.toggle('sel', b.dataset.diff === diff));
+  $('diffHint').textContent = D().hint;
 }
 
 /* ---------- poppetjes-maker ---------- */
@@ -226,6 +237,7 @@ function resetPhotoUI() {
   if (draft.face) { const im = faceImage(draft.face); const show = () => $('photoPrev').getContext('2d').drawImage(im, 0, 0, 96, 96); if (im.complete) show(); else im.onload = show; }
 }
 buildPhotoUI();
+document.querySelectorAll('#diffs .chip').forEach(b => b.onclick = () => { diff = b.dataset.diff; store.set('diff', diff); renderRoster(); });
 $('btnPlay').onclick = () => startSession();
 $('btnAgain').onclick = () => primary();
 $('btnHome').onclick = () => goHome();
@@ -234,7 +246,7 @@ $('btnHome').onclick = () => goHome();
 let state = 'menu', player, obstacles = [], items = [], speed = 330, score = 0, itemCount = 0, spawnIn = 1, time = 0, phase = 0, faintT = 0, wonT = 0, lastT;
 let dust = [], motes = Array.from({ length: 34 }, (_, i) => ({ x: (i * 97) % 800, y: 30 + (i * 53) % 280, r: 0.8 + (i % 3) * 0.5, v: 4 + i % 5, p: i })), shake = 0, wasAir = false, dustT = 0, nextMile = 100;
 let level = 1, dispLevel = 1, pulse = 0, popups = [], confetti = [], overShown = false, hintT = 0;
-let bonus = null, bonusKind = 'wine', bonusBlend = 0, flash = 0, flashCol = '#fff', nextVatAt = 200, finishObj = null, finT = 0, drunk = 0, shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
+let goldIn = 12, sips = 0, GOLDMODE = false, bonus = null, bonusKind = 'wine', bonusBlend = 0, flash = 0, flashCol = '#fff', nextVatAt = 200, finishObj = null, finT = 0, drunk = 0, shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
 const input = { duck: false }; let jumpHeld = false;
 const rnd = (a, b) => a + Math.random() * (b - a);
 // de beveiliger: een grote kerel in het zwart
@@ -243,9 +255,9 @@ const ANGRY_WOMAN = normalize({ id: -2, name: 'Boze vrouw', gender: 'f', height:
 const FAT_MAN = normalize({ id: -3, name: 'Dikke man', gender: 'm', height: 'normal', build: 'broad', skin: SKIN[1], eyes: EYES[3], style: 'short', hair: HAIR[8], beard: 'moustache', top: 'none', bottom: 'briefs', bottomColor: '#f2f2f2', shoes: SKIN[1], chest: 88, belly: 140, butt: 115, posture: 'slouch' });
 // wie er achter je aan rent: wisselt af
 const CHASERS = [
-  { char: BOUNCER, name: 'Beveiliger', line: 'Hé jij! Blijf staan!', mood: '', prop: '', scale: 1.04 },
-  { char: ANGRY_WOMAN, name: 'Boze vrouw', line: 'Ik krijg je wel, jij!', mood: 'angry', prop: 'pin', scale: 1.0 },
-  { char: FAT_MAN, name: 'Dikke man', line: 'Geef me mijn bier terug!', mood: 'angry', prop: '', scale: 1.06 }
+  { char: BOUNCER, name: 'Beveiliger', lines: { 1: 'Hé jij! Dat bier is nog niet betaald!', 2: 'Hé jij! Blijf van die wijn af!', 3: 'Hé jij! Geef die cocktail hier!' }, mood: '', prop: '', scale: 1.04 },
+  { char: ANGRY_WOMAN, name: 'Boze vrouw', lines: { 1: 'Alweer aan het bier, jij!', 2: 'Dronken van de wijn! Kom hier!', 3: 'Cocktails?! Ik krijg je wel!' }, mood: 'angry', prop: 'pin', scale: 1.0 },
+  { char: FAT_MAN, name: 'Dikke man', lines: { 1: 'Geef me mijn bier terug!', 2: 'Dat is mijn wijn, dief!', 3: 'Mijn cocktail met parasol!' }, mood: 'angry', prop: '', scale: 1.06 }
 ];
 let chaserIdx = -1;
 function newChaser() {
@@ -258,12 +270,12 @@ function initRun(f) {
   best = store.get(bestKey(), 0);
   player = { x: 150, y: GROUND, vy: 0, on: true, duck: false, f };
   obstacles = []; items = []; popups = []; confetti = []; dust = [];
-  speed = MODES[mode].base; score = 0; itemCount = 0; spawnIn = 1; time = 0; phase = 0; faintT = 0; wonT = 0;
+  speed = MODES[mode].base * D().speed; score = 0; itemCount = 0; spawnIn = 1; time = 0; phase = 0; faintT = 0; wonT = 0;
   level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; shake = 0; wasAir = false; nextMile = 100;
-  drunk = 0; bonus = null; bonusBlend = 0; flash = 0; nextVatAt = rnd(150, 300); shotCount = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28); zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
+  drunk = 0; bonus = null; bonusBlend = 0; flash = 0; nextVatAt = rnd(150, 300); shotCount = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28) * D().chase; goldIn = rnd(8, 14) * D().gold; sips = 0; zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
 }
 function setOver(o) {
-  $('overTitle').textContent = o.title; $('overScore').textContent = o.text || ''; $('overDrink').textContent = o.drink || '';
+  $('overTitle').textContent = o.title; $('overScore').textContent = o.text || ''; $('overDrink').textContent = o.drink || ''; $('overSips').textContent = o.sips || '';
   $('overBoard').innerHTML = o.board || ''; $('btnAgain').textContent = o.label; primary = o.fn; $('over').classList.remove('hidden');
 }
 function startSession() {
@@ -322,10 +334,15 @@ function spawn() {
     items.push({ type: 'shot', x: x + o.w + (minGap - o.w) * 0.4, y: GROUND - rnd(40, 70), got: false });
   }
   // eerlijke afstand: genoeg tijd om te landen en te reageren, ook bij hoog tempo (een sprong duurt ca. 0,7 s)
-  spawnIn = (speed * 1.1 + 140 + rnd(0, 380)) / speed + (o.type === 'lamp' ? 0.2 : 0) + (o.type === 'table' ? o.w / speed : 0);
+  spawnIn = (speed * 1.1 + 140 + rnd(0, 380)) / speed * D().gap + (o.type === 'lamp' ? 0.2 : 0) + (o.type === 'table' ? o.w / speed : 0);
 }
 function collect(c) {
   const M = MODES[mode];
+  if (c.type === 'gold') { // gouden drankje: telt op als slokken om uit te delen
+    sips++; pop('+1 slok om uit te delen!', Math.max(60, player.x - 70), player.y - 125, '#ffd43b');
+    for (let i = 0; i < 16; i++) dust.push({ x: c.x, y: c.y, vx: rnd(-140, 140), vy: rnd(-220, -40), t: 0, r: rnd(1.5, 3.5), g: true, col: '255,212,59' });
+    return;
+  }
   if (c.type === 'shot') {
     drunk = Math.min(8, drunk + 4.5); pop('Hik!', player.x - 10, player.y - 120, '#ffb3e6'); // een shotje maakt je wazig en wankelig
     shotCount++;
@@ -334,14 +351,14 @@ function collect(c) {
       for (let i = 0; i < 40; i++) confetti.push({ x: rnd(0, W), y: rnd(-120, 0), vx: rnd(-40, 40), vy: rnd(120, 260), r: rnd(0, 6), c: ['#ffc933', '#ff6b6b', '#4dabf7', '#69db7c', '#f783ac'][i % 5], loop: false });
     } else { level = Math.min(1, level + M.refill); pulse = 0.7; pop('Bijgevuld!', 62, 56, '#7ee08a'); }
   } else {
-    itemCount++; level = Math.max(0, level - M.drain);
+    itemCount++; level = Math.max(0, level - M.drain * D().drain);
     if (level <= 0) win();
   }
 }
 function enterBonus(o) { // in het vat gesprongen: 250 meter wijnkelder, brouwerij of cocktailbar
   bonus = { until: score + 250 }; bonusKind = o.liquid; zone = 0; flash = 1; flashCol = { wine: '#8a1c40', beer: '#f4b01c', cocktail: '#ff3d81' }[o.liquid];
   for (let i = 0; i < 28; i++) dust.push({ x: o.x + o.w / 2, y: o.y, vx: rnd(-170, 170), vy: rnd(-340, -120), t: 0, r: rnd(2, 5), g: true, col: { wine: '170,30,75', beer: '245,175,30', cocktail: '255,70,140' }[o.liquid] });
-  obstacles = []; items = []; bouncer = null; bouncerIn = rnd(26, 40); spawnIn = 1.6; player.y = GROUND; player.vy = 0; player.on = true; shake = 0.2;
+  obstacles = []; items = []; bouncer = null; bouncerIn = rnd(26, 40) * D().chase; spawnIn = 1.6; player.y = GROUND; player.vy = 0; player.on = true; shake = 0.2;
   pop({ wine: 'Wijnkelder! 250 meter', beer: 'Brouwerij! 250 meter', cocktail: 'Cocktailbar! 250 meter' }[o.liquid], W / 2 - 80, 130, '#ffd43b');
 }
 function faintNow() {
@@ -358,18 +375,19 @@ function win() {
 function boardHtml() {
   const rank = session.results.filter(Boolean).map(r => Object.assign({}, r)).sort((a, b) => a.won !== b.won ? (a.won ? -1 : 1) : a.won ? a.time - b.time : a.left - b.left);
   const lost = rank.filter(r => !r.won), worst = lost[lost.length - 1];
-  return '<table><tr><th></th><th>Speler</th><th>Resultaat</th><th>Afstand</th></tr>' +
-    rank.map((r, i) => `<tr${r === worst ? ' class="worst"' : ''}><td>${i + 1}</td><td>${esc(r.name)}</td><td>${r.won ? '🏆 Glas leeg' : 'Drinkt ' + r.left + '%'}</td><td>${r.dist} m</td></tr>`).join('') +
+  return '<table><tr><th></th><th>Speler</th><th>Resultaat</th><th>Afstand</th><th>🥇 Slokken</th></tr>' +
+    rank.map((r, i) => `<tr${r === worst ? ' class="worst"' : ''}><td>${i + 1}</td><td>${esc(r.name)}</td><td>${r.won ? '🏆 Glas leeg' : 'Drinkt ' + r.left + '%'}</td><td>${r.dist} m</td><td>${r.sips || 0}</td></tr>`).join('') +
     '</table>' + (worst ? `<p class="boardnote">${esc(worst.name)} drinkt het meest!</p>` : '');
 }
 function showResult(kind) {
   overShown = true;
   const won = kind === 'won', fin = kind === 'finish';
   const left = Math.ceil(level * 100), dist = Math.floor(score), n = session.queue.length, last = session.idx >= n - 1;
-  session.results[session.idx] = { name: player.f.name, won, left, dist, time };
+  session.results[session.idx] = { name: player.f.name, won, left, dist, time, sips };
   const base = {
     title: won ? 'Gewonnen! 🍻' : fin ? 'Finish! 🏁' : 'Flauwgevallen! 😵',
-    text: (won ? 'Je glas is leeg! ' : fin ? `Je hebt de ${FINISH} meter gehaald! ` : '') + `Afstand ${dist} m · ${MODES[mode].name}: ${itemCount}`,
+    text: (won ? 'Je glas is leeg! ' : fin ? `Je hebt de ${FINISH} meter gehaald! ` : '') + `Afstand ${dist} m · ${MODES[mode].name}: ${itemCount} · ${D().name}`,
+    sips: sips > 0 ? `🥇 Je mag ${sips} ${sips === 1 ? 'slok' : 'slokken'} uitdelen!` : '',
     // verloren: wat er nog in het glas zit moet worden opgedronken
     drink: won ? '' : `${DRINK_ICON[mode]} ${player.f.name}, drink je glas op! Er zit nog ${left}% in.`
   };
@@ -445,10 +463,18 @@ function update(dt) {
   if (state === 'finished') { finT += dt; stepPhysics(dt, false); if (finT > 1.4 && !overShown) showResult('finish'); return; }
   if (state === 'over') { updateBouncer(dt); return; }
   if (state !== 'play') return;
-  time += dt; hintT += dt; speed = Math.min(M.max, M.base + time * M.grow); score += speed * dt / 50; phase += dt * speed * 0.052;
+  time += dt; hintT += dt; speed = Math.min(M.max * D().speed, (M.base + time * M.grow) * D().speed); score += speed * dt / 50; phase += dt * speed * 0.052;
   player.duck = input.duck;
   for (const o of obstacles) o.x -= speed * dt;
-  for (const c of items) c.x -= speed * dt;
+  for (const c of items) {
+    c.x -= speed * (c.type === 'gold' ? 1.5 : 1) * dt; // het gouden drankje vliegt sneller voorbij
+    if (c.type === 'gold') {
+      c.y = c.by + Math.sin(time * 4 + c.p) * 14;
+      if (Math.random() < 0.6) dust.push({ x: c.x + 10, y: c.y + rnd(-7, 7), vx: rnd(20, 70), vy: rnd(-15, 15), t: 0, r: rnd(1, 2.6), col: '255,212,59' });
+    }
+  }
+  goldIn -= dt;
+  if (goldIn <= 0 && score < FINISH - 80) { items.push({ type: 'gold', x: W + 50, by: GROUND - rnd(55, 150), y: GROUND - 90, p: rnd(0, 6), got: false }); goldIn = rnd(14, 24) * D().gold; }
   stepPhysics(dt, input.duck);
   const air = !player.on;
   if (wasAir && !air) for (let i = 0; i < 7; i++) dust.push({ x: player.x - 6, y: player.y - 2, vx: rnd(-90, 60), vy: rnd(-40, -5), t: 0, r: rnd(2, 4) });
@@ -459,7 +485,7 @@ function update(dt) {
   const nz = bonus ? 0 : Math.floor(score / 150) % 2; // elke 150 m wisselt het café tussen bar en dansvloer
   if (nz !== zone) { zone = nz; pop(zone ? 'Dansvloer!' : 'Terug in het café', W / 2 - 50, 130, '#ff9de2'); }
   bouncerIn -= dt;
-  if (!bouncer && !bonus && bouncerIn <= 0 && score < FINISH - 150) { bouncer = newChaser(); bouncerIn = rnd(24, 36); }
+  if (!bouncer && !bonus && bouncerIn <= 0 && score < FINISH - 150) { bouncer = newChaser(); bouncerIn = rnd(24, 36) * D().chase; }
   updateBouncer(dt);
   if (score < FINISH - 15) { spawnIn -= dt; if (spawnIn <= 0) spawn(); } // vlak voor de finish komen er geen obstakels meer
   if (!finishObj && score >= FINISH - 10) finishObj = { x: W + 40 };
@@ -496,7 +522,7 @@ function update(dt) {
 function drawBottle(x, y, k = 1) { // groen bierflesje
   ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
   ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0, 17, 8, 2.5, 0, 0, 7); ctx.fill();
-  const g = ctx.createLinearGradient(-7, 0, 7, 0); g.addColorStop(0, '#0f4d22'); g.addColorStop(0.35, '#37b24d'); g.addColorStop(1, '#0d3d1b');
+  const g = ctx.createLinearGradient(-7, 0, 7, 0); if (GOLDMODE) { g.addColorStop(0, '#7a5200'); g.addColorStop(0.35, '#ffd43b'); g.addColorStop(1, '#6b4600'); } else { g.addColorStop(0, '#0f4d22'); g.addColorStop(0.35, '#37b24d'); g.addColorStop(1, '#0d3d1b'); }
   ctx.fillStyle = g; ctx.strokeStyle = '#0a2d14'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(-6.5, 16); ctx.lineTo(-6.5, -2); ctx.quadraticCurveTo(-6.5, -6, -2.6, -9); ctx.lineTo(-2.4, -17); ctx.lineTo(2.4, -17); ctx.lineTo(2.6, -9); ctx.quadraticCurveTo(6.5, -6, 6.5, -2); ctx.lineTo(6.5, 16); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#f1e9d2'; ctx.fillRect(-6.5, 2, 13, 9); ctx.fillStyle = '#c92a2a'; ctx.fillRect(-6.5, 5, 13, 2.4);
@@ -516,7 +542,7 @@ function drawCocktail(x, y, w, h, lv) { // groot cocktailglas met rietje, paraso
   if (lv > 0.01) {
     ctx.save(); bowl(); ctx.clip();
     const top = y + bowlH - lv * bowlH * 0.9;
-    const g = ctx.createLinearGradient(0, top, 0, y + bowlH); g.addColorStop(0, '#ffb347'); g.addColorStop(0.5, '#ff6b9d'); g.addColorStop(1, '#c2185b');
+    const g = ctx.createLinearGradient(0, top, 0, y + bowlH); if (GOLDMODE) { g.addColorStop(0, '#fff0a0'); g.addColorStop(0.5, '#ffc933'); g.addColorStop(1, '#b8860b'); } else { g.addColorStop(0, '#ffb347'); g.addColorStop(0.5, '#ff6b9d'); g.addColorStop(1, '#c2185b'); }
     ctx.fillStyle = g; ctx.fillRect(x, top, w, bowlH);
     ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(x + w * 0.2, top + 3, w * 0.16, w * 0.16); ctx.fillRect(x + w * 0.55, top + 2, w * 0.15, w * 0.15);
     ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.ellipse(cx, top, w * 0.45, 2, 0, 0, 7); ctx.fill();
@@ -542,7 +568,7 @@ function drawWine(x, y, w, h, lv) { // wijnglas, lv = vulling 0..1
   if (lv > 0.01) {
     ctx.save(); bowl(); ctx.clip();
     const top = y + bowlH - lv * bowlH * 0.86;
-    const g = ctx.createLinearGradient(0, top, 0, y + bowlH); g.addColorStop(0, '#b0244f'); g.addColorStop(1, '#5c0f27');
+    const g = ctx.createLinearGradient(0, top, 0, y + bowlH); if (GOLDMODE) { g.addColorStop(0, '#ffe27a'); g.addColorStop(1, '#c98a00'); } else { g.addColorStop(0, '#b0244f'); g.addColorStop(1, '#5c0f27'); }
     ctx.fillStyle = g; ctx.fillRect(x, top, w, bowlH);
     ctx.fillStyle = 'rgba(255,200,215,.35)'; ctx.beginPath(); ctx.ellipse(cx, top, w * 0.4, 2, 0, 0, 7); ctx.fill();
     ctx.restore();
@@ -565,7 +591,18 @@ function drawShot(x, y, k = 1) { // shotglaasje
   ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(-4, -7); ctx.lineTo(-3.4, 3); ctx.stroke();
   ctx.restore();
 }
+function drawGold(c) { // gouden drankje met glans en sterretjes
+  const pu = 0.6 + 0.4 * Math.sin(time * 8 + c.p);
+  const g = ctx.createRadialGradient(c.x, c.y, 2, c.x, c.y, 36); g.addColorStop(0, `rgba(255,226,120,${0.5 * pu + 0.25})`); g.addColorStop(1, 'rgba(255,226,120,0)');
+  ctx.fillStyle = g; ctx.fillRect(c.x - 38, c.y - 38, 76, 76);
+  GOLDMODE = true;
+  if (mode === 1) drawBottle(c.x, c.y, 1.15); else if (mode === 3) drawCocktail(c.x - 13, c.y - 22, 26, 44, 0.6); else drawWine(c.x - 12, c.y - 21, 24, 42, 0.6);
+  GOLDMODE = false;
+  ctx.fillStyle = '#fff7c2';
+  for (let i = 0; i < 3; i++) { const a = time * 3 + i * 2.1 + c.p, sx = c.x + Math.cos(a) * 22, sy = c.y + Math.sin(a) * 18; ctx.fillRect(sx - 3, sy - 0.8, 6, 1.6); ctx.fillRect(sx - 0.8, sy - 3, 1.6, 6); }
+}
 function drawItem(c, bob = 0) {
+  if (c.type === 'gold') { drawGold(c); return; }
   if (c.type === 'shot') drawShot(c.x, c.y + bob, 1.25);
   else if (mode === 1) drawBottle(c.x, c.y + bob);
   else if (mode === 3) drawCocktail(c.x - 12, c.y + bob - 20, 24, 40, 0.55);
@@ -1091,11 +1128,11 @@ function drawBouncer() {
   if (b.act && b.act.type === 'hop') pose = 'jump'; else if (b.act && b.act.type === 'duck') pose = 'duck';
   drawChar(ctx, d.char, b.x, GROUND - b.h, { pose, t: b.ph, scale: d.scale, faint: fall ? Math.min(1, b.fallT / 0.4) : 0, fwd: true, mood: d.mood, prop: d.prop, airH: b.h });
   if (!fall && b.age < 2.8 && b.x > 0) {
-    ctx.font = '800 14px Nunito, system-ui, sans-serif'; const tw = ctx.measureText(d.line).width + 18;
+    ctx.font = '800 14px Nunito, system-ui, sans-serif'; const line = d.lines[mode], tw = ctx.measureText(line).width + 18;
     const tx = Math.max(b.x + 10, 100), ty = GROUND - 150;
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(tx - 6, ty - 22, tw, 28, 10); ctx.fill();
     ctx.beginPath(); ctx.moveTo(tx + 6, ty + 5); ctx.lineTo(tx + 14, ty + 15); ctx.lineTo(tx + 22, ty + 5); ctx.fill();
-    ctx.fillStyle = '#111'; ctx.textBaseline = 'middle'; ctx.fillText(d.line, tx + 3, ty - 8);
+    ctx.fillStyle = '#111'; ctx.textBaseline = 'middle'; ctx.fillText(line, tx + 3, ty - 8);
   }
   if (fall && b.fallT > 0.35) drawStars(b.x + 70, GROUND - 6, b.fallT);
 }
@@ -1121,6 +1158,11 @@ function pill(x, y, w, h) {
 }
 function drawHUD() {
   pill(BADGE.x, BADGE.y, BADGE.w, BADGE.h); pill(176, BADGE.y, 96, BADGE.h);
+  if (sips > 0) { // gouden slokken
+    pill(282, BADGE.y, 92, BADGE.h); GOLDMODE = true;
+    if (mode === 1) drawBottle(302, 31, 0.6); else if (mode === 3) drawCocktail(292, 15, 20, 32, 0.5); else drawWine(294, 17, 16, 28, 0.5);
+    GOLDMODE = false; ctx.fillStyle = '#ffd43b'; ctx.font = '800 21px Nunito, system-ui, sans-serif'; ctx.textBaseline = 'middle'; ctx.fillText('×' + sips, 324, 32);
+  }
   drawPortrait(BADGE.x + 21, BADGE.y + 21, 16);
   ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.font = '800 21px Nunito, system-ui, sans-serif';
   const ds = String(Math.floor(score)), dw = ctx.measureText(ds).width;
@@ -1131,8 +1173,8 @@ function drawHUD() {
   ctx.textAlign = 'right'; ctx.font = '700 14px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#ffe9b8'; ctx.fillText('Best ' + best + ' m', W - 16, 30); ctx.textAlign = 'left';
   if (bonus) {
     const txt = { wine: '🍷 Wijnkelder', beer: '🍺 Brouwerij', cocktail: '🍹 Cocktailbar' }[bonusKind] + ` · nog ${Math.max(0, Math.ceil(bonus.until - score))} m`;
-    ctx.font = '800 14px Nunito, system-ui, sans-serif'; const tw = ctx.measureText(txt).width + 28; pill(W / 2 - tw / 2, 12, tw, 28);
-    ctx.fillStyle = '#ffe9b8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, W / 2, 27); ctx.textAlign = 'left';
+    ctx.font = '800 14px Nunito, system-ui, sans-serif'; const tw = ctx.measureText(txt).width + 28; pill(W / 2 + 110 - tw / 2, 12, tw, 28);
+    ctx.fillStyle = '#ffe9b8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, W / 2 + 110, 27); ctx.textAlign = 'left';
   }
   const pr = Math.min(1, score / FINISH);
   ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.roundRect(BADGE.x + 8, 57, 250, 8, 4); ctx.fill();
