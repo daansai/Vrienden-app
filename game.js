@@ -35,7 +35,7 @@ let best = store.get(bestKey(), 0);
 const MODES = {
   1: { name: 'Bierflesjes', base: 330, grow: 9, max: 780, drain: 0.02, refill: 0.08 },
   3: { name: 'Cocktails', base: 330, grow: 9, max: 780, drain: 0.012, refill: 0.08 }, // zelfde tempo als bier, maar er gaat veel minder uit het glas
-  2: { name: 'Wijnglazen', base: 330, grow: 9, max: 780, drain: 0.045, refill: 0.09 } // zelfde tempo als bier; wijn is sterker, dus het glas gaat sneller leeg
+  2: { name: 'Wijnglazen', base: 330, grow: 9, max: 780, drain: 0.045, refill: 0.04 } // zelfde tempo als bier; wijn is sterker, dus het glas gaat sneller leeg
 };
 
 /* ---------- menu & spelers ---------- */
@@ -246,17 +246,21 @@ $('btnHome').onclick = () => goHome();
 let state = 'menu', player, obstacles = [], items = [], speed = 330, score = 0, itemCount = 0, spawnIn = 1, time = 0, phase = 0, faintT = 0, wonT = 0, lastT;
 let dust = [], motes = Array.from({ length: 34 }, (_, i) => ({ x: (i * 97) % 800, y: 30 + (i * 53) % 280, r: 0.8 + (i % 3) * 0.5, v: 4 + i % 5, p: i })), shake = 0, wasAir = false, dustT = 0, nextMile = 100;
 let level = 1, dispLevel = 1, pulse = 0, popups = [], confetti = [], overShown = false, hintT = 0;
-let goldIn = 12, sips = 0, GOLDMODE = false, bonus = null, bonusKind = 'wine', bonusBlend = 0, flash = 0, flashCol = '#fff', nextVatAt = 200, finishObj = null, finT = 0, drunk = 0, shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
+let nextDoorAt = 320, goldIn = 12, sips = 0, GOLDMODE = false, bonus = null, bonusKind = 'wine', bonusBlend = 0, flash = 0, flashCol = '#fff', nextVatAt = 200, finishObj = null, finT = 0, drunk = 0, shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
 const input = { duck: false }; let jumpHeld = false;
 const rnd = (a, b) => a + Math.random() * (b - a);
 // de beveiliger: een grote kerel in het zwart
 const BOUNCER = normalize({ id: -1, name: 'Beveiliger', gender: 'm', height: 'tall', build: 'broad', skin: SKIN[3], eyes: EYES[5], style: 'bald', hair: HAIR[0], beard: 'stubble', glasses: 'sun', top: 'blazer', topColor: '#15151c', bottom: 'chinos', bottomColor: '#15151c', shoes: '#0a0a0a', chest: 78, belly: 72, butt: 60, posture: 'upright' });
 const ANGRY_WOMAN = normalize({ id: -2, name: 'Boze vrouw', gender: 'f', height: 'normal', build: 'broad', skin: SKIN[1], eyes: EYES[5], style: 'curly', hair: HAIR[8], glasses: 'round', top: 'dress', topColor: '#8e44ad', shoes: '#5a3a2a', chest: 78, belly: 72, butt: 78 });
 const FAT_MAN = normalize({ id: -3, name: 'Dikke man', gender: 'm', height: 'normal', build: 'broad', skin: SKIN[1], eyes: EYES[3], style: 'short', hair: HAIR[8], beard: 'moustache', top: 'none', bottom: 'briefs', bottomColor: '#f2f2f2', shoes: SKIN[1], chest: 88, belly: 140, butt: 115, posture: 'slouch' });
+const DAD = normalize({ id: -4, name: 'Vader', gender: 'm', height: 'normal', build: 'normal', skin: SKIN[1], eyes: EYES[1], style: 'short', hair: HAIR[8], glasses: 'square', top: 'long', topColor: '#8a6d3b', bottom: 'chinos', bottomColor: '#6b5a3c', shoes: '#3a2a1c', chest: 55, belly: 68, butt: 55, hump: 8 });
+const MOM = normalize({ id: -5, name: 'Moeder', gender: 'f', height: 'normal', build: 'normal', skin: SKIN[1], eyes: EYES[2], style: 'bob', hair: HAIR[3], top: 'long', topColor: '#2a9d8f', bottom: 'skirt', bottomColor: '#3a3a4a', shoes: '#2a2a2a', chest: 62, belly: 55, butt: 60 });
 // wie er achter je aan rent: wisselt af
 const CHASERS = [
   { char: BOUNCER, name: 'Beveiliger', lines: { 1: 'Hé jij! Dat bier is nog niet betaald!', 2: 'Hé jij! Blijf van die wijn af!', 3: 'Hé jij! Geef die cocktail hier!' }, mood: '', prop: '', scale: 1.04 },
   { char: ANGRY_WOMAN, name: 'Boze vrouw', lines: { 1: 'Alweer aan het bier, jij!', 2: 'Dronken van de wijn! Kom hier!', 3: 'Cocktails?! Ik krijg je wel!' }, mood: 'angry', prop: 'pin', scale: 1.0 },
+  { char: DAD, name: 'Vader', lines: { 1: 'Je zou vanavond niet dronken worden!', 2: 'Je zou vanavond niet dronken worden! Leg die wijn weg!', 3: 'Je zou vanavond niet dronken worden! Geen cocktails!' }, mood: 'angry', prop: '', scale: 1.0 },
+  { char: MOM, name: 'Moeder', lines: { 1: 'Ik dacht dat je vanavond niet dronken zou worden!', 2: 'Je zou vanavond niet dronken worden, hè?!', 3: 'Cocktails?! Je zou niet dronken worden!' }, mood: 'angry', prop: 'bag', scale: 1.0 },
   { char: FAT_MAN, name: 'Dikke man', lines: { 1: 'Geef me mijn bier terug!', 2: 'Dat is mijn wijn, dief!', 3: 'Mijn cocktail met parasol!' }, mood: 'angry', prop: '', scale: 1.06 }
 ];
 let chaserIdx = -1;
@@ -272,7 +276,7 @@ function initRun(f) {
   obstacles = []; items = []; popups = []; confetti = []; dust = [];
   speed = MODES[mode].base * D().speed; score = 0; itemCount = 0; spawnIn = 1; time = 0; phase = 0; faintT = 0; wonT = 0;
   level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; shake = 0; wasAir = false; nextMile = 100;
-  drunk = 0; bonus = null; bonusBlend = 0; flash = 0; nextVatAt = rnd(150, 300); shotCount = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28) * D().chase; goldIn = rnd(8, 14) * D().gold; sips = 0; zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
+  drunk = 0; bonus = null; bonusBlend = 0; flash = 0; nextVatAt = rnd(150, 300); nextDoorAt = rnd(300, 450); shotCount = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28) * D().chase; goldIn = rnd(8, 14) * D().gold; sips = 0; zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
 }
 function setOver(o) {
   $('overTitle').textContent = o.title; $('overScore').textContent = o.text || ''; $('overDrink').textContent = o.drink || ''; $('overSips').textContent = o.sips || '';
@@ -307,6 +311,8 @@ function spawn() {
   let o;
   if (!bonus && !finishObj && score >= nextVatAt && score < FINISH - 330) { // open vat: spring erin voor een bonusomgeving
     o = { type: 'vat', x, w: 76, h: 86, y: GROUND - 86, liquid: mode === 2 ? 'wine' : mode === 3 ? 'cocktail' : 'beer' }; nextVatAt = score + rnd(250, 450);
+  } else if (!bonus && !finishObj && score >= nextDoorAt && score < FINISH - 330) { // achterdeur naar een veld
+    o = { type: 'door', x, w: 74, h: 124, y: GROUND - 124, kind: { 1: 'wheat', 2: 'vineyard', 3: 'fruit' }[mode] }; nextDoorAt = score + rnd(380, 600);
   } else if (r < 0.2) o = { type: 'barrel', x, w: 50, h: 46, y: GROUND - 46 };
   else if (r < 0.32) o = { type: 'shards', x, w: 66, h: 30, y: GROUND - 30 };
   else if (r < 0.44) o = { type: 'crates', x, w: 44, h: 78, y: GROUND - 78 };
@@ -316,7 +322,9 @@ function spawn() {
   o.theme = bonus ? bonusKind : (zone ? 'disco' : 'cafe'); // elke omgeving heeft eigen tafels, lampen, kratten...
   obstacles.push(o);
   const n = 3 + (Math.random() * 3 | 0);
-  if (o.type === 'lamp') {
+  if (o.type === 'door') {
+    for (let i = 0; i < 5; i++) items.push({ type: 'main', x: x - 30 - i * 34, y: GROUND - 24, got: false });
+  } else if (o.type === 'lamp') {
     for (let i = 0; i < n; i++) items.push({ type: 'main', x: x - 60 + i * 34, y: GROUND - 24, got: false });
   } else if (o.type === 'table') { // beloning voor wie op de tafel springt
     const cnt = Math.floor((o.w - 30) / 26);
@@ -329,7 +337,7 @@ function spawn() {
     }
   }
   // een shotje (bijvullen) op hoofdhoogte, vlak voor het obstakel
-  if (o.type !== 'table' && Math.random() < (bonus ? 0.55 : 0.4)) { // shotje ongeveer midden tussen dit en het volgende obstakel
+  if (o.type !== 'table' && o.type !== 'door' && Math.random() < (bonus ? 0.55 : 0.4)) { // shotje ongeveer midden tussen dit en het volgende obstakel
     const minGap = speed * 1.1 + 140;
     items.push({ type: 'shot', x: x + o.w + (minGap - o.w) * 0.4, y: GROUND - rnd(40, 70), got: false });
   }
@@ -356,10 +364,11 @@ function collect(c) {
   }
 }
 function enterBonus(o) { // in het vat gesprongen: 250 meter wijnkelder, brouwerij of cocktailbar
-  bonus = { until: score + 250 }; bonusKind = o.liquid; zone = 0; flash = 1; flashCol = { wine: '#8a1c40', beer: '#f4b01c', cocktail: '#ff3d81' }[o.liquid];
-  for (let i = 0; i < 28; i++) dust.push({ x: o.x + o.w / 2, y: o.y, vx: rnd(-170, 170), vy: rnd(-340, -120), t: 0, r: rnd(2, 5), g: true, col: { wine: '170,30,75', beer: '245,175,30', cocktail: '255,70,140' }[o.liquid] });
+  const kind = o.kind || o.liquid;
+  bonus = { until: score + 250 }; bonusKind = kind; zone = 0; flash = 1; flashCol = { wine: '#8a1c40', beer: '#f4b01c', cocktail: '#ff3d81', wheat: '#f4d35e', vineyard: '#7b2d8e', fruit: '#ff9f1c' }[kind];
+  for (let i = 0; i < 28; i++) dust.push({ x: o.x + o.w / 2, y: o.y, vx: rnd(-170, 170), vy: rnd(-340, -120), t: 0, r: rnd(2, 5), g: true, col: { wine: '170,30,75', beer: '245,175,30', cocktail: '255,70,140', wheat: '240,205,90', vineyard: '130,50,150', fruit: '255,150,30' }[kind] });
   obstacles = []; items = []; bouncer = null; bouncerIn = rnd(26, 40) * D().chase; spawnIn = 1.6; player.y = GROUND; player.vy = 0; player.on = true; shake = 0.2;
-  pop({ wine: 'Wijnkelder! 250 meter', beer: 'Brouwerij! 250 meter', cocktail: 'Cocktailbar! 250 meter' }[o.liquid], W / 2 - 80, 130, '#ffd43b');
+  pop({ wine: 'Wijnkelder! 250 meter', beer: 'Brouwerij! 250 meter', cocktail: 'Cocktailbar! 250 meter', wheat: 'Tarwe veld! 250 meter', vineyard: 'Druivenveld! 250 meter', fruit: 'Fruitplantage! 250 meter' }[kind], W / 2 - 80, 130, '#ffd43b');
 }
 function faintNow() {
   state = 'faint'; faintT = 0; shake = 0.3;
@@ -423,7 +432,7 @@ function updateBouncer(dt) {
       b.h = b.act.type === 'hop' ? b.act.H * 4 * u * (1 - u) : 0;
       if (b.act.t >= b.act.T) { b.act = null; b.h = 0; }
     } else for (const o of obstacles) { // volgend obstakel: een paar keer ontwijken, daarna struikelen
-      if (b.handled.has(o) || o.x > b.x + 150 || o.x + o.w < b.x - 20) continue;
+      if (o.type === 'door' || b.handled.has(o) || o.x > b.x + 150 || o.x + o.w < b.x - 20) continue;
       b.handled.add(o);
       if (b.survived >= b.need) { b.trip = o; break; }
       b.survived++;
@@ -500,6 +509,10 @@ function update(dt) {
   }
   const pb = playerBox();
   for (const o of obstacles) {
+    if (o.type === 'door') { // achterdeur: erdoorheen rennen brengt je buiten
+      if (!o.done && o.x + o.w / 2 <= player.x) { o.done = true; enterBonus(o); return; }
+      continue;
+    }
     let hit;
     if (o.type === 'vat') {
       if (pb.x < o.x + o.w - 8 && pb.x + pb.w > o.x + 8) {
@@ -608,6 +621,84 @@ function drawItem(c, bob = 0) {
   else if (mode === 3) drawCocktail(c.x - 12, c.y + bob - 20, 24, 40, 0.55);
   else drawWine(c.x - 11, c.y + bob - 19, 22, 38, 0.42);
 }
+const FIELD_THEMES = ['wheat', 'vineyard', 'fruit'];
+// Obstakels in de velden: strobalen, druivenkratten, fruitmanden, picknicktafels...
+const FIELDOBJ = {
+  barrel(o, th) { // 50 x 46
+    const w = o.w, h = o.h;
+    if (th === 'wheat') { // strobaal
+      const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#f0c85a'); g.addColorStop(1, '#b8892a');
+      ctx.fillStyle = g; ctx.strokeStyle = '#7a5a14'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(1, 4, w - 2, h - 4, 6); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(120,80,10,.5)'; ctx.lineWidth = 1; for (let i = 0; i < 14; i++) { const yy = 8 + (i * 7) % (h - 12), xx = 4 + (i * 13) % (w - 14); ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx + 9, yy + 1); ctx.stroke(); }
+      ctx.fillStyle = '#6a4a14'; ctx.fillRect(14, 4, 3, h - 4); ctx.fillRect(w - 18, 4, 3, h - 4);
+    } else { // mand met druiven of fruit
+      const g = ctx.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#8a5a2a'); g.addColorStop(0.5, '#c9964e'); g.addColorStop(1, '#7a4a20');
+      ctx.fillStyle = g; ctx.strokeStyle = '#4a2a10'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(2, 20); ctx.lineTo(w - 2, 20); ctx.lineTo(w - 7, h); ctx.lineTo(7, h); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(60,30,10,.5)'; ctx.lineWidth = 1; for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(3, 20 + i * 5); ctx.lineTo(w - 3, 20 + i * 5); ctx.stroke(); }
+      const cols = th === 'vineyard' ? ['#6a2c91', '#7d3aa8', '#512070'] : ['#ff9f1c', '#ffbf3c', '#ff7a1c'];
+      for (let i = 0; i < 10; i++) { ctx.fillStyle = cols[i % 3]; ctx.beginPath(); ctx.arc(9 + (i % 5) * 8 + (i > 4 ? 4 : 0), 14 - (i > 4 ? 0 : -3) + (i > 4 ? -3 : 0), th === 'vineyard' ? 5.2 : 6.5, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.arc(7 + (i % 5) * 8 + (i > 4 ? 4 : 0), 12 + (i > 4 ? -3 : 0), 1.5, 0, 7); ctx.fill(); }
+      ctx.fillStyle = '#4a9a2a'; ctx.beginPath(); ctx.ellipse(w / 2 + 6, 5, 8, 4, 0.5, 0, 7); ctx.fill();
+    }
+  },
+  crates(o, th) { // 44 x 78 (twee op elkaar)
+    for (let i = 0; i < 2; i++) {
+      const yy = i * 39, w = o.w;
+      if (th === 'wheat') { // graanzakken
+        const g = ctx.createLinearGradient(0, yy, w, yy); g.addColorStop(0, '#b8955a'); g.addColorStop(0.5, '#e0c283'); g.addColorStop(1, '#a8854a');
+        ctx.fillStyle = g; ctx.strokeStyle = '#6a4e22'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(1, yy + 8, w - 2, 31, 10); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(13, yy + 1, w - 26, 12, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#6a4a14'; ctx.fillRect(12, yy + 9, w - 24, 3);
+        ctx.strokeStyle = 'rgba(100,70,20,.4)'; ctx.lineWidth = 0.8; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(6 + k * 8, yy + 16); ctx.lineTo(6 + k * 8, yy + 36); ctx.stroke(); }
+      } else { // kratten met druiven / fruit
+        ctx.fillStyle = '#b5834a'; ctx.strokeStyle = '#3b2412'; ctx.lineWidth = 2; ctx.fillRect(0, yy + 10, w, 29); ctx.strokeRect(0, yy + 10, w, 29);
+        ctx.strokeStyle = 'rgba(60,35,15,.55)'; ctx.lineWidth = 1; for (const ly of [19, 28]) { ctx.beginPath(); ctx.moveTo(1, yy + ly); ctx.lineTo(w - 1, yy + ly); ctx.stroke(); }
+        const cols = th === 'vineyard' ? (i ? ['#6a2c91', '#7d3aa8'] : ['#8fbf3a', '#a8d44a']) : (i ? ['#e63946', '#2a9d3f'] : ['#ff9f1c', '#ffbf3c']);
+        for (let k = 0; k < 6; k++) { ctx.fillStyle = cols[k % 2]; ctx.beginPath(); ctx.arc(7 + k * 6.4, yy + 8 + (k % 2) * 2, th === 'vineyard' ? 4.8 : 6, 0, 7); ctx.fill(); }
+      }
+    }
+  },
+  shards(o, th) { // 66 x 30: stenen met grasbosjes
+    ctx.fillStyle = '#5a9a3a'; for (const gx of [4, 22, 40, 58]) { ctx.beginPath(); ctx.moveTo(gx, o.h); ctx.lineTo(gx + 2, o.h - 9); ctx.lineTo(gx + 4, o.h); ctx.lineTo(gx + 6, o.h - 7); ctx.lineTo(gx + 8, o.h); ctx.fill(); }
+    for (const [sx, sw, sh, sc] of [[3, 24, 18, '#8d8f94'], [24, 26, 28, '#a3a6ab'], [44, 20, 15, '#7e8085']]) {
+      const g = ctx.createLinearGradient(sx, o.h - sh, sx + sw, o.h); g.addColorStop(0, sc); g.addColorStop(1, '#5a5c60');
+      ctx.fillStyle = g; ctx.strokeStyle = '#3a3c40'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(sx, o.h - 1); ctx.lineTo(sx + sw * 0.15, o.h - sh * 0.7); ctx.lineTo(sx + sw * 0.5, o.h - sh); ctx.lineTo(sx + sw * 0.9, o.h - sh * 0.6); ctx.lineTo(sx + sw, o.h - 1); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  },
+  bollard(o, th) { // houten hekpalen
+    const cap = { wheat: '#e3b64c', vineyard: '#6a2c91', fruit: '#ff9f1c' }[th];
+    for (let i = 0; i < o.k; i++) {
+      const bx = i * 30, g = ctx.createLinearGradient(bx, 0, bx + 16, 0); g.addColorStop(0, '#6a4624'); g.addColorStop(0.45, '#a87a45'); g.addColorStop(1, '#5a3a1a');
+      ctx.fillStyle = g; ctx.strokeStyle = '#2e1b0c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(bx, 6, 16, o.h - 6, [3, 3, 2, 2]); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = cap; ctx.beginPath(); ctx.roundRect(bx - 1, 0, 18, 10, 4); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(40,20,5,.4)'; ctx.lineWidth = 0.8; for (const ly of [20, 30, 42]) { ctx.beginPath(); ctx.moveTo(bx + 2, ly); ctx.lineTo(bx + 14, ly + 1); ctx.stroke(); }
+      if (i < o.k - 1) { ctx.strokeStyle = th === 'vineyard' ? '#8a8a8f' : '#c9a86a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(bx + 16, 22); ctx.quadraticCurveTo(bx + 23, 28, bx + 30, 22); ctx.moveTo(bx + 16, 38); ctx.quadraticCurveTo(bx + 23, 44, bx + 30, 38); ctx.stroke(); }
+    }
+  },
+  table(o, th) { // picknicktafel (bovenkant op y = 0)
+    const w = o.w, h = o.h, cl = { wheat: ['#f4d35e', '#fff8dc'], vineyard: ['#7b2d8e', '#f3e6f7'], fruit: ['#ff9f1c', '#fff4e0'] }[th];
+    ctx.strokeStyle = '#4a2e14'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    for (const lx of [w * 0.18, w * 0.78]) { ctx.beginPath(); ctx.moveTo(lx, 10); ctx.lineTo(lx - 12, h); ctx.moveTo(lx, 10); ctx.lineTo(lx + 12, h); ctx.stroke(); }
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(w * 0.18 - 6, h - 16); ctx.lineTo(w * 0.78 + 6, h - 16); ctx.stroke();
+    const tg = ctx.createLinearGradient(0, 0, 0, 10); tg.addColorStop(0, '#c9965a'); tg.addColorStop(1, '#8a5a2a'); ctx.fillStyle = tg; ctx.strokeStyle = '#3b2412'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-2, 0, w + 4, 10, 3); ctx.fill(); ctx.stroke();
+    const cells = Math.floor((w - 10) / 9.1);
+    for (let i = 0; i < cells; i++) for (let j = 0; j < 2; j++) { ctx.fillStyle = (i + j) % 2 ? cl[1] : cl[0]; ctx.fillRect(5 + i * ((w - 10) / cells), 10 + j * 8, (w - 10) / cells + 0.5, 8); }
+    ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(5, 22, w - 10, 4);
+  },
+  lamp(o, th) { // hangt op hoofdhoogte: snoer + bos
+    const sway = Math.sin(time * 3 + o.x * 0.01) * 0.05;
+    ctx.translate(o.w / 2, 0); ctx.rotate(sway);
+    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -o.y); ctx.lineTo(0, 8); ctx.stroke();
+    if (th === 'wheat') { // opgehangen korenschoof
+      for (let i = -5; i <= 5; i++) { ctx.strokeStyle = '#d9a93a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(i * 0.8, 8); ctx.lineTo(i * 3.4, 36); ctx.stroke(); ctx.fillStyle = '#f0c24a'; ctx.beginPath(); ctx.ellipse(i * 3.4, 36, 2.2, 5, i * 0.08, 0, 7); ctx.fill(); }
+      ctx.fillStyle = '#6a4a14'; ctx.fillRect(-6, 10, 12, 4);
+    } else if (th === 'vineyard') { // druiventros
+      ctx.fillStyle = '#4a9a2a'; ctx.beginPath(); ctx.ellipse(6, 8, 9, 4, -0.4, 0, 7); ctx.fill();
+      for (let r = 0; r < 5; r++) for (let k = 0; k <= 4 - r; k++) { ctx.fillStyle = (r + k) % 2 ? '#6a2c91' : '#7d3aa8'; ctx.beginPath(); ctx.arc((k - (4 - r) / 2) * 8, 14 + r * 6.5, 4.6, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.arc((k - (4 - r) / 2) * 8 - 1.5, 12.5 + r * 6.5, 1.2, 0, 7); ctx.fill(); }
+    } else { // sinaasappels aan een tak
+      ctx.strokeStyle = '#4a9a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-14, 10); ctx.quadraticCurveTo(0, 4, 14, 10); ctx.stroke();
+      for (const [ox, oy] of [[-11, 22], [0, 28], [11, 22]]) { ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ox, 10); ctx.lineTo(ox, oy - 8); ctx.stroke(); const g = ctx.createRadialGradient(ox - 3, oy - 3, 1, ox, oy, 10); g.addColorStop(0, '#ffc454'); g.addColorStop(1, '#e8750c'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(ox, oy, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#4a9a2a'; ctx.beginPath(); ctx.ellipse(ox + 3, oy - 9, 4, 2, -0.5, 0, 7); ctx.fill(); }
+    }
+  }
+};
 // Per omgeving een eigen uiterlijk (dezelfde afmetingen en botsingen, andere look)
 const THEMED = {
   barrel(o, th) { // 50 x 46
@@ -738,7 +829,8 @@ const THEMED = {
 function drawObstacle(o) {
   ctx.save(); ctx.translate(o.x, o.y);
   if (o.type !== 'lamp') { ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(o.w / 2, o.h, o.w * 0.6, 5, 0, 0, 7); ctx.fill(); }
-  if (o.theme && o.theme !== 'cafe' && THEMED[o.type]) { THEMED[o.type](o, o.theme); ctx.restore(); return; }
+  if (FIELD_THEMES.includes(o.theme) && FIELDOBJ[o.type]) { FIELDOBJ[o.type](o, o.theme); ctx.restore(); return; }
+  if (o.theme && o.theme !== 'cafe' && !FIELD_THEMES.includes(o.theme) && THEMED[o.type]) { THEMED[o.type](o, o.theme); ctx.restore(); return; }
   if (o.type === 'barrel') {
     const g = ctx.createLinearGradient(0, 0, o.w, 0); g.addColorStop(0, '#6e3d16'); g.addColorStop(0.4, '#b0702f'); g.addColorStop(1, '#5a3010');
     ctx.fillStyle = g; ctx.strokeStyle = '#2e1b0c'; ctx.lineWidth = 2.5;
@@ -800,6 +892,20 @@ function drawObstacle(o) {
     const by = -38 + Math.sin(time * 6 + o.x * 0.02) * 5;
     ctx.fillStyle = '#ffd43b'; ctx.strokeStyle = '#7a5200'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 9, by); ctx.lineTo(cx + 9, by); ctx.lineTo(cx, by + 14); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#fff'; ctx.font = '800 13px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('Spring erin!', cx, by - 6); ctx.textAlign = 'left';
+  } else if (o.type === 'door') { // achterdeur naar een veld: zonlicht schijnt naar binnen
+    const k = o.kind, w = o.w, h = o.h, lab = { wheat: 'TARWEVELD', vineyard: 'DRUIVENVELD', fruit: 'FRUITTUIN' }[k];
+    const gl = ctx.createLinearGradient(w / 2, 0, w / 2, h); gl.addColorStop(0, 'rgba(255,245,170,.0)'); gl.addColorStop(1, 'rgba(255,245,170,.55)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.moveTo(6, h); ctx.lineTo(w - 6, h); ctx.lineTo(w + 40, h + 6); ctx.lineTo(-40, h + 6); ctx.fill();
+    const sky = ctx.createLinearGradient(0, 10, 0, h); sky.addColorStop(0, '#8fd4ff'); sky.addColorStop(0.6, '#e8f7ff'); sky.addColorStop(1, '#fff2b8');
+    ctx.fillStyle = sky; ctx.fillRect(6, 12, w - 12, h - 12);
+    const fc = { wheat: ['#e0b43a', '#f2cd5a'], vineyard: ['#6a2c91', '#4e8a2a'], fruit: ['#ff9f1c', '#3f9a2a'] }[k];
+    ctx.fillStyle = fc[1]; ctx.beginPath(); ctx.moveTo(6, h * 0.62); ctx.quadraticCurveTo(w / 2, h * 0.5, w - 6, h * 0.62); ctx.lineTo(w - 6, h); ctx.lineTo(6, h); ctx.fill();
+    ctx.fillStyle = fc[0]; for (let r = 0; r < 4; r++) { ctx.fillRect(6, h * 0.7 + r * 9, w - 12, 4); }
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(w - 22, 30, 7, 0, 7); ctx.fill();
+    ctx.fillStyle = '#6a4224'; ctx.strokeStyle = '#2e1b0c'; ctx.lineWidth = 2.5; ctx.fillRect(0, 8, 8, h - 8); ctx.fillRect(w - 8, 8, 8, h - 8); ctx.fillRect(-4, 0, w + 8, 14); ctx.strokeRect(-4, 0, w + 8, 14);
+    ctx.fillStyle = '#8a5a2e'; ctx.beginPath(); ctx.moveTo(8, 14); ctx.lineTo(24, 20); ctx.lineTo(24, h - 4); ctx.lineTo(8, h); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w - 8, 14); ctx.lineTo(w - 24, 20); ctx.lineTo(w - 24, h - 4); ctx.lineTo(w - 8, h); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#2e1b0c'; ctx.beginPath(); ctx.roundRect(-8, -22, w + 16, 20, 5); ctx.fill(); ctx.fillStyle = '#ffd43b'; ctx.font = '800 12px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(lab, w / 2, -12);
+    const by = -44 + Math.sin(time * 6 + o.x * 0.02) * 5; ctx.fillStyle = '#ffd43b'; ctx.strokeStyle = '#7a5200'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(w / 2 - 9, by); ctx.lineTo(w / 2 + 9, by); ctx.lineTo(w / 2, by + 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.fillText('Ren erdoor!', w / 2, by - 8); ctx.textAlign = 'left';
   } else if (o.type === 'bollard') {
     for (let i = 0; i < o.k; i++) {
       const bx = i * 30;
@@ -1094,6 +1200,110 @@ function drawCocktailBar() { // cocktailbar: neon, verlichte flessen, lichtsnoer
   for (let i = 0; i < 4; i++) { const rx = ((i * 260 - bgX * 0.9) % 1040 + 1040) % 1040 - 120, rg = ctx.createLinearGradient(rx, GROUND, rx + 80, H); rg.addColorStop(0, i % 2 ? 'rgba(255,61,129,.28)' : 'rgba(0,229,255,.25)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.fillRect(rx, GROUND + 4, 70, H - GROUND); }
   ctx.fillStyle = 'rgba(140,60,220,.08)'; ctx.fillRect(0, 0, W, H);
 }
+// --- buitenomgevingen: tarweveld, druivenveld, fruitplantage ---
+function skyBase(top, mid, bot) { const g = ctx.createLinearGradient(0, 0, 0, GROUND); g.addColorStop(0, top); g.addColorStop(0.62, mid); g.addColorStop(1, bot); ctx.fillStyle = g; ctx.fillRect(0, 0, W, GROUND); }
+function sunClouds(sx, sy) {
+  const sg = ctx.createRadialGradient(sx, sy, 6, sx, sy, 130); sg.addColorStop(0, 'rgba(255,252,210,1)'); sg.addColorStop(0.25, 'rgba(255,240,160,.8)'); sg.addColorStop(1, 'rgba(255,240,160,0)'); ctx.fillStyle = sg; ctx.fillRect(sx - 150, 0, 300, 230);
+  ctx.fillStyle = '#fffbe0'; ctx.beginPath(); ctx.arc(sx, sy, 30, 0, 7); ctx.fill();
+  const off = (bgX * 0.1) % 520;
+  for (let i = -1; i < 3; i++) { const x = i * 520 - off + 120; ctx.fillStyle = 'rgba(255,255,255,.88)'; for (const [dx, dy, r] of [[0, 0, 24], [26, -9, 30], [58, 0, 22], [30, 8, 26]]) { ctx.beginPath(); ctx.arc(x + dx, 62 + dy, r, 0, 7); ctx.fill(); } }
+}
+function hillLayer(par, base, amp, col, period) {
+  const off = bgX * par; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, GROUND);
+  for (let x = 0; x <= W; x += 10) ctx.lineTo(x, base - Math.sin((x + off) / period) * amp - Math.sin((x + off) / (period * 0.43) + 1.3) * amp * 0.4);
+  ctx.lineTo(W, GROUND); ctx.closePath(); ctx.fill();
+}
+function dirtPath(top, bot, pebble) {
+  const g = ctx.createLinearGradient(0, GROUND, 0, H); g.addColorStop(0, top); g.addColorStop(1, bot); ctx.fillStyle = g; ctx.fillRect(0, GROUND, W, H - GROUND);
+  ctx.fillStyle = 'rgba(40,25,10,.5)'; ctx.fillRect(0, GROUND, W, 4);
+  ctx.fillStyle = '#5a9a3a'; for (let x = -10; x < W + 10; x += 9) { const gx = x - (bgX % 9); ctx.beginPath(); ctx.moveTo(gx, GROUND + 3); ctx.lineTo(gx + 2, GROUND - 7 - ((x * 7) % 5)); ctx.lineTo(gx + 5, GROUND + 3); ctx.fill(); }
+  ctx.strokeStyle = 'rgba(50,30,10,.28)'; ctx.lineWidth = 3; for (const y of [GROUND + 42, GROUND + 80]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const po = bgX % 160; ctx.fillStyle = pebble; for (let x = -160; x < W + 160; x += 53) for (let r = 0; r < 3; r++) { ctx.beginPath(); ctx.ellipse(x - po + (r * 29) % 50, GROUND + 14 + r * 32, 3 + (x + r) % 3, 2, 0, 0, 7); ctx.fill(); }
+}
+function drawWheat() {
+  skyBase('#5fb8f2', '#bfe6ff', '#fff0b8'); sunClouds(640, 74);
+  hillLayer(0.12, 215, 18, '#c8b25a', 150);
+  // windmolen en schuur
+  let off = (bgX * 0.22) % 900;
+  for (let i = -1; i < 3; i++) {
+    const x = i * 900 - off + 260;
+    ctx.fillStyle = '#9a6a42'; ctx.beginPath(); ctx.moveTo(x - 20, 250); ctx.lineTo(x + 20, 250); ctx.lineTo(x + 13, 150); ctx.lineTo(x - 13, 150); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#6a3a22'; ctx.beginPath(); ctx.moveTo(x - 17, 150); ctx.lineTo(x + 17, 150); ctx.lineTo(x, 128); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.translate(x, 150); ctx.rotate(time * 0.7 + i); ctx.fillStyle = '#efe6cc'; ctx.strokeStyle = '#8a7a5a'; ctx.lineWidth = 1.5;
+    for (let b = 0; b < 4; b++) { ctx.rotate(Math.PI / 2); ctx.fillRect(-2, -6, 4, -58); ctx.fillRect(2, -58, 13, 26); ctx.strokeRect(2, -58, 13, 26); }
+    ctx.restore(); ctx.fillStyle = '#4a3a2a'; ctx.beginPath(); ctx.arc(x, 150, 4, 0, 7); ctx.fill();
+  }
+  off = (bgX * 0.2) % 1100;
+  for (let i = -1; i < 2; i++) { const x = i * 1100 - off + 780; ctx.fillStyle = '#b5362c'; ctx.fillRect(x, 195, 80, 55); ctx.fillStyle = '#8a2a22'; ctx.beginPath(); ctx.moveTo(x - 6, 197); ctx.lineTo(x + 40, 160); ctx.lineTo(x + 86, 197); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeRect(x + 26, 216, 28, 34); ctx.beginPath(); ctx.moveTo(x + 26, 216); ctx.lineTo(x + 54, 250); ctx.moveTo(x + 54, 216); ctx.lineTo(x + 26, 250); ctx.stroke(); }
+  hillLayer(0.3, 250, 10, '#d9bd55', 120);
+  // wuivend korenveld
+  for (let r = 0; r < 7; r++) {
+    const y = 240 + r * ((GROUND - 240) / 7), sc = 0.55 + r * 0.13, step = 6 * sc, o2 = (bgX * (0.35 + r * 0.09)) % (step * 4);
+    ctx.strokeStyle = r % 2 ? '#c99a24' : '#dcae30'; ctx.lineWidth = 1.5 * sc; ctx.beginPath();
+    for (let x = -step * 4; x < W + step * 4; x += step) { const sw = Math.sin(time * 2 + (x + bgX * 0.4) * 0.04 + r) * 3 * sc; ctx.moveTo(x - o2, y + 8); ctx.lineTo(x - o2 + sw, y - 22 * sc); }
+    ctx.stroke(); ctx.strokeStyle = '#f2cd5a'; ctx.lineWidth = 3.2 * sc; ctx.beginPath();
+    for (let x = -step * 4; x < W + step * 4; x += step) { const sw = Math.sin(time * 2 + (x + bgX * 0.4) * 0.04 + r) * 3 * sc; ctx.moveTo(x - o2 + sw, y - 22 * sc); ctx.lineTo(x - o2 + sw * 1.1, y - 30 * sc); }
+    ctx.stroke();
+  }
+  // hek
+  off = (bgX * 0.7) % 90; ctx.strokeStyle = '#7a5a34'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 296); ctx.lineTo(W, 296); ctx.moveTo(0, 312); ctx.lineTo(W, 312); ctx.stroke();
+  ctx.fillStyle = '#8a6a3e'; for (let x = -90; x < W + 90; x += 90) ctx.fillRect(x - off, 286, 7, 54);
+  dirtPath('#b98a54', '#7a5430', 'rgba(70,45,20,.5)');
+  ctx.fillStyle = 'rgba(255,230,130,.1)'; ctx.fillRect(0, 0, W, H);
+}
+function drawVineyard() {
+  skyBase('#6aa7e8', '#d6e8f7', '#ffe8c4'); sunClouds(160, 80);
+  hillLayer(0.1, 205, 22, '#9fbf78', 170); hillLayer(0.2, 232, 16, '#7da95a', 140);
+  let off = (bgX * 0.2) % 1000;
+  for (let i = -1; i < 2; i++) { // kasteeltje op de heuvel
+    const x = i * 1000 - off + 520;
+    ctx.fillStyle = '#d9c9a3'; ctx.fillRect(x, 168, 110, 62); ctx.fillRect(x - 14, 140, 30, 90); ctx.fillRect(x + 96, 140, 30, 90);
+    ctx.fillStyle = '#7a3a2a'; for (const tx of [x - 14, x + 96]) { ctx.beginPath(); ctx.moveTo(tx - 4, 140); ctx.lineTo(tx + 15, 112); ctx.lineTo(tx + 34, 140); ctx.closePath(); ctx.fill(); }
+    ctx.beginPath(); ctx.moveTo(x - 4, 168); ctx.lineTo(x + 55, 140); ctx.lineTo(x + 114, 168); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5a3a22'; ctx.beginPath(); ctx.roundRect(x + 46, 196, 18, 34, [9, 9, 0, 0]); ctx.fill(); ctx.fillStyle = '#4a4a5a'; for (const wx of [x + 14, x + 84]) ctx.fillRect(wx, 182, 10, 14);
+  }
+  // wijnranken in rijen
+  for (const [par, y0, sc] of [[0.35, 262, 0.7], [0.55, 282, 0.9]]) {
+    const o2 = (bgX * par) % 60; ctx.fillStyle = '#3f7a2a';
+    for (let x = -60; x < W + 60; x += 30) { ctx.beginPath(); ctx.ellipse(x - o2, y0, 22 * sc, 17 * sc, 0, 0, 7); ctx.fill(); }
+    ctx.fillStyle = '#4d9234'; for (let x = -45; x < W + 60; x += 30) { ctx.beginPath(); ctx.ellipse(x - o2, y0 - 5, 16 * sc, 12 * sc, 0, 0, 7); ctx.fill(); }
+    ctx.fillStyle = '#5a2a82'; for (let x = -50; x < W + 60; x += 30) { for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(x - o2 + (k % 2) * 4 - 2, y0 + 8 * sc + k * 4 * sc, 3.4 * sc, 0, 7); ctx.fill(); } }
+  }
+  off = (bgX * 0.7) % 100; ctx.strokeStyle = '#8a8a90'; ctx.lineWidth = 1.5; ctx.beginPath(); for (const wy of [290, 308]) { ctx.moveTo(0, wy); ctx.lineTo(W, wy); } ctx.stroke();
+  ctx.fillStyle = '#6a4a28'; for (let x = -100; x < W + 100; x += 100) ctx.fillRect(x - off, 280, 7, 60);
+  dirtPath('#a8a39a', '#6a665e', 'rgba(60,58,52,.55)');
+  ctx.fillStyle = 'rgba(150,80,200,.07)'; ctx.fillRect(0, 0, W, H);
+}
+function drawFruit() {
+  skyBase('#3fc5ff', '#aee9ff', '#fff3c0'); sunClouds(130, 72);
+  hillLayer(0.1, 220, 14, '#6fc27a', 160);
+  // palmbomen
+  let off = (bgX * 0.3) % 420;
+  for (let i = -1; i < 3; i++) {
+    const x = i * 420 - off + 180, sw = Math.sin(time * 1.5 + i) * 4;
+    ctx.strokeStyle = '#7a5530'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, 262); ctx.quadraticCurveTo(x + 14, 200, x + 6 + sw * 0.4, 138); ctx.stroke();
+    ctx.strokeStyle = '#2f8f3f'; ctx.lineWidth = 5;
+    for (let f = 0; f < 7; f++) { const a = -Math.PI + f * (Math.PI / 6) + sw * 0.02; ctx.beginPath(); ctx.moveTo(x + 6, 138); ctx.quadraticCurveTo(x + 6 + Math.cos(a) * 34, 120 + Math.sin(a) * 20 - 12, x + 6 + Math.cos(a) * 62 + sw, 138 + Math.sin(a) * 6 + 22); ctx.stroke(); }
+    ctx.fillStyle = '#5a3a1a'; ctx.beginPath(); ctx.arc(x + 2, 142, 4, 0, 7); ctx.arc(x + 10, 144, 4, 0, 7); ctx.fill();
+  }
+  // fruitkraam
+  off = (bgX * 0.5) % 900;
+  for (let i = -1; i < 2; i++) {
+    const x = i * 900 - off + 560;
+    ctx.fillStyle = '#8a5a2e'; ctx.fillRect(x, 230, 8, 80); ctx.fillRect(x + 142, 230, 8, 80); ctx.fillRect(x, 276, 150, 34);
+    for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#e63946' : '#fff4e0'; ctx.beginPath(); ctx.moveTo(x - 8 + k * 26, 214); ctx.lineTo(x - 8 + (k + 1) * 26, 214); ctx.lineTo(x - 2 + (k + 1) * 25, 240); ctx.lineTo(x - 2 + k * 25, 240); ctx.closePath(); ctx.fill(); }
+    for (let k = 0; k < 8; k++) { ctx.fillStyle = ['#ff9f1c', '#e63946', '#ffd43b', '#6bbf3a'][k % 4]; ctx.beginPath(); ctx.arc(x + 14 + k * 17, 272 + (k % 2) * 2, 8, 0, 7); ctx.fill(); }
+  }
+  // sinaasappelbomen
+  off = (bgX * 0.62) % 260;
+  for (let x = -260; x < W + 260; x += 260) {
+    const tx = x - off + 100; ctx.fillStyle = '#6a4224'; ctx.fillRect(tx - 5, 262, 10, 78);
+    ctx.fillStyle = '#2f8a3a'; for (const [dx, dy, r] of [[0, 244, 40], [-30, 262, 30], [30, 262, 30], [0, 222, 30]]) { ctx.beginPath(); ctx.arc(tx + dx, dy, r, 0, 7); ctx.fill(); }
+    ctx.fillStyle = '#ff9f1c'; for (let k = 0; k < 9; k++) { ctx.beginPath(); ctx.arc(tx - 36 + (k * 17) % 72, 214 + (k * 23) % 60, 5.5, 0, 7); ctx.fill(); }
+  }
+  dirtPath('#e9d6a0', '#bfa56a', 'rgba(130,100,50,.45)');
+  ctx.fillStyle = 'rgba(255,170,40,.07)'; ctx.fillRect(0, 0, W, H);
+}
 function drawFinish() { // finishboog met geblokte vlag
   const x = finishObj.x, top = GROUND - 190;
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x + 60, GROUND + 2, 70, 6, 0, 0, 7); ctx.fill();
@@ -1172,7 +1382,7 @@ function drawHUD() {
   ctx.fillStyle = '#fff'; ctx.font = '800 21px Nunito, system-ui, sans-serif'; ctx.fillText(itemCount, 216, 32);
   ctx.textAlign = 'right'; ctx.font = '700 14px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#ffe9b8'; ctx.fillText('Best ' + best + ' m', W - 16, 30); ctx.textAlign = 'left';
   if (bonus) {
-    const txt = { wine: '🍷 Wijnkelder', beer: '🍺 Brouwerij', cocktail: '🍹 Cocktailbar' }[bonusKind] + ` · nog ${Math.max(0, Math.ceil(bonus.until - score))} m`;
+    const txt = { wine: '🍷 Wijnkelder', beer: '🍺 Brouwerij', cocktail: '🍹 Cocktailbar', wheat: '🌾 Tarwe veld', vineyard: '🍇 Druivenveld', fruit: '🍊 Fruitplantage' }[bonusKind] + ` · nog ${Math.max(0, Math.ceil(bonus.until - score))} m`;
     ctx.font = '800 14px Nunito, system-ui, sans-serif'; const tw = ctx.measureText(txt).width + 28; pill(W / 2 + 110 - tw / 2, 12, tw, 28);
     ctx.fillStyle = '#ffe9b8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, W / 2 + 110, 27); ctx.textAlign = 'left';
   }
@@ -1205,7 +1415,7 @@ function drawStars(cx, cy, t) {
 function renderScene(ts) {
   if (state === 'play') bgX += speed * (1 / 60);
   drawBg();
-  if (bonusBlend > 0.01) { ctx.globalAlpha = Math.min(1, bonusBlend); if (bonusKind === 'wine') drawCellar(); else if (bonusKind === 'cocktail') drawCocktailBar(); else drawBrewery(); ctx.globalAlpha = 1; }
+  if (bonusBlend > 0.01) { ctx.globalAlpha = Math.min(1, bonusBlend); ({ wine: drawCellar, cocktail: drawCocktailBar, beer: drawBrewery, wheat: drawWheat, vineyard: drawVineyard, fruit: drawFruit }[bonusKind] || drawBrewery)(); ctx.globalAlpha = 1; }
   if (state === 'menu') { vignette(); return; }
   if (zoneBlend * (1 - bonusBlend) > 0.01) drawDisco(zoneBlend * (1 - bonusBlend));
   for (const m of motes) { ctx.fillStyle = `rgba(255,236,170,${0.25 + 0.2 * Math.sin(time * 2 + m.p)})`; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 7); ctx.fill(); }

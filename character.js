@@ -52,6 +52,17 @@ function limb(c, x1, y1, x2, y2, r1, r2, fill) {
   c.beginPath(); c.moveTo(x1 + nx * r1, y1 + ny * r1); c.lineTo(x2 + nx * r2, y2 + ny * r2);
   c.lineTo(x2 - nx * r2, y2 - ny * r2); c.lineTo(x1 - nx * r1, y1 - ny * r1); c.closePath(); c.fill();
   c.beginPath(); c.arc(x1, y1, r1, 0, 7); c.arc(x2, y2, r2, 0, 7); c.fill();
+  if (typeof fill === 'string') volume(c, x1, y1, x2, y2, r1, r2);
+}
+// cilindrische belichting: licht van linksboven, schaduwrand aan de andere kant
+function volume(c, x1, y1, x2, y2, r1, r2) {
+  const a = Math.atan2(y2 - y1, x2 - x1); let nx = Math.cos(a + Math.PI / 2), ny = Math.sin(a + Math.PI / 2);
+  if (nx * 0.5 - ny * 0.85 < 0) { nx = -nx; ny = -ny; }
+  const sx1 = x1 + (x2 - x1) * 0.12, sy1 = y1 + (y2 - y1) * 0.12, sx2 = x2 - (x2 - x1) * 0.12, sy2 = y2 - (y2 - y1) * 0.12;
+  c.save(); c.lineCap = 'round';
+  c.globalAlpha = 0.11; c.strokeStyle = "#fff"; c.lineWidth = (r1 + r2) * 0.3; c.beginPath(); c.moveTo(sx1 + nx * r1 * 0.38, sy1 + ny * r1 * 0.38); c.lineTo(sx2 + nx * r2 * 0.38, sy2 + ny * r2 * 0.38); c.stroke();
+  c.globalAlpha = 0.11; c.strokeStyle = "#000"; c.lineWidth = (r1 + r2) * 0.34; c.beginPath(); c.moveTo(sx1 - nx * r1 * 0.78, sy1 - ny * r1 * 0.78); c.lineTo(sx2 - nx * r2 * 0.78, sy2 - ny * r2 * 0.78); c.stroke();
+  c.restore();
 }
 const FAB_CACHE = {};
 // Stofpatronen: echte structuur voor denim, jersey, tricot, fleece, wol en katoen
@@ -164,6 +175,8 @@ function drawChar(c, f, x, y, o = {}) {
     limb(c, shoulder.x, shoulder.y, ex, ey, 3.6 * bm, 3.0 * bm, sk);
     limb(c, ex, ey, wx, wy, 3.0 * bm, 2.4 * bm, sk);
     ell(c, wx + Math.sin(A.a + A.e) * 1.5, wy + Math.cos(A.a + A.e) * 1.5, 2.7, 3, sk);
+    ell(c, wx + Math.sin(A.a + A.e) * 1.2 + 1.9, wy + Math.cos(A.a + A.e) * 0.5 - 0.6, 1.1, 1.9, sk, 0.5); // duim
+    c.strokeStyle = shade(sk, 0.65); c.lineWidth = 0.5; c.beginPath(); c.moveTo(wx + Math.sin(A.a + A.e) * 2.6 - 1, wy + Math.cos(A.a + A.e) * 3.6 - 1.4); c.lineTo(wx + Math.sin(A.a + A.e) * 2.6 + 0.8, wy + Math.cos(A.a + A.e) * 3.6 + 0.4); c.stroke(); // vingerspleet
     const fk = { tshirt: 'jersey', long: 'knit', hoodie: 'fleece', blazer: 'wool' }[f.top], fp = fk ? fabric(fk, f.topColor) : null;
     if (f.top === 'tshirt') {
       const mx = shoulder.x + (ex - shoulder.x) * 0.6, my = shoulder.y + (ey - shoulder.y) * 0.6;
@@ -176,6 +189,12 @@ function drawChar(c, f, x, y, o = {}) {
       c.globalAlpha = back ? 0.45 : 0.7; limb(c, shoulder.x, shoulder.y, ex, ey, 4.6 * bm, 3.8 * bm, fp); limb(c, ex, ey, ux, uy, 3.8 * bm, 3.2 * bm, fp); c.globalAlpha = 1;
       if (f.top !== 'blazer') { limb(c, ux - (ux - ex) * 0.2, uy - (uy - ey) * 0.2, ux, uy, 3.4 * bm, 3.3 * bm, shade(f.topColor, 0.72)); } // boordje om de pols
       else { c.strokeStyle = shade(f.topColor, 0.5); c.lineWidth = 0.8; c.beginPath(); c.arc(ux, uy, 3.3 * bm, 0, 7); c.stroke(); ell(c, ux - (ux - ex) * 0.25, uy - (uy - ey) * 0.25, 0.9, 0.9, '#1a1a1a'); }
+    }
+    if (o.prop === 'bag' && i === 0) { // handtas aan de arm
+      c.save(); c.translate(wx + Math.sin(A.a + A.e) * 1.5, wy + Math.cos(A.a + A.e) * 1.5); c.rotate(0.25 + Math.sin(ph) * 0.12);
+      c.strokeStyle = '#4a2a14'; c.lineWidth = 1.4; c.beginPath(); c.arc(0, 4, 5, Math.PI, 0); c.stroke();
+      const bg = c.createLinearGradient(0, 4, 0, 15); bg.addColorStop(0, '#9a5a2e'); bg.addColorStop(1, '#6a3a1a'); c.fillStyle = bg; c.beginPath(); c.roundRect(-7.5, 4, 15, 11, 2.5); c.fill();
+      c.fillStyle = '#d4a017'; c.fillRect(-1.5, 7, 3, 2.4); c.restore();
     }
     if (o.prop === 'pin' && i === 0) { // rolpin in de hand
       c.save(); c.translate(wx + Math.sin(A.a + A.e) * 1.5, wy + Math.cos(A.a + A.e) * 1.5); c.rotate(-1.0 + Math.sin(ph) * 0.15);
@@ -213,10 +232,14 @@ function drawChar(c, f, x, y, o = {}) {
       c.globalAlpha = back ? 0.45 : 0.8; limb(c, hipx, hipy, ex2, ey2, rr, 5.4 * bm, fabric(f.bottom === 'briefs' ? 'jersey' : 'chino', f.bottomColor)); c.globalAlpha = 1;
       hem(c, ex2, ey2, Math.atan2(ky - hipy, kx - hipx), 5.6 * bm, shade(f.bottomColor, 0.62)); // zoom van de pijp
     }
+    if (f.bottom === 'jeans' || f.bottom === 'chinos') { volume(c, hipx, hipy, kx, ky, 6 * bm * tb, 4.9 * bm); volume(c, kx, ky, ax, ay, 4.8 * bm, 3.8 * bm); }
     const fa = 0.5 - b * 0.5, tx = ax + Math.cos(fa) * 10, ty = ay + Math.sin(fa) * 10;
     limb(c, ax - 1.5, ay + 0.5, tx, ty, 3.5, 2.9, shade(f.shoes, k));
     c.strokeStyle = shade(f.shoes, 0.55 * k + 0.2); c.lineWidth = 1.2;
     c.beginPath(); c.moveTo(ax - 4, ay + 3); c.lineTo(tx + 1.5, ty + 2.2); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 0.7; // veters en neusglans
+    for (let n = 0; n < 3; n++) { const t = 0.3 + n * 0.2, lx = ax + (tx - ax) * t, ly = ay + (ty - ay) * t; c.beginPath(); c.moveTo(lx - 1.4, ly - 2.9); c.lineTo(lx + 1.4, ly - 3.6); c.stroke(); }
+    ell(c, tx - 2, ty - 1.6, 1.8, 0.8, 'rgba(255,255,255,.35)');
   };
   /* --- romp --- */
   const dB = 6.2 * bm, dF = 6.4 * bm;
@@ -241,6 +264,11 @@ function drawChar(c, f, x, y, o = {}) {
     if (tfk) { // stoftextuur over het bovenstuk
       c.globalAlpha = 0.65; c.fillStyle = fabric(tfk, f.topColor); c.fillRect(-20, f.top === 'tank' ? -20 : -30, 50, f.top === 'tank' ? 30 : 40); c.globalAlpha = 1;
       if (f.top === 'long' || f.top === 'hoodie') { c.fillStyle = shade(f.topColor, 0.72); c.fillRect(-14, -1, 40, 4); c.strokeStyle = shade(f.topColor, 0.55); c.lineWidth = 0.6; for (let xx = -12; xx < 24; xx += 2.2) { c.beginPath(); c.moveTo(xx, -1); c.lineTo(xx, 3); c.stroke(); } } // boord onderaan
+    }
+    const vg = c.createLinearGradient(0, -26, 0, 3); vg.addColorStop(0, 'rgba(255,255,255,.07)'); vg.addColorStop(1, 'rgba(0,0,0,.2)'); c.fillStyle = vg; c.fillRect(-20, -30, 50, 40);
+    if (f.top !== 'none' && f.top !== 'tank') { // plooien bij de taille en onder de oksel
+      c.strokeStyle = 'rgba(0,0,0,.22)'; c.lineWidth = 0.8; c.beginPath();
+      c.moveTo(-dB * 0.6, -9); c.quadraticCurveTo(0, -6.5, dF * 0.9 + bellyX * 0.5, -9.5); c.moveTo(-dB * 0.3, -19); c.quadraticCurveTo(dF * 0.3, -16, dF * 0.8, -18.5); c.stroke();
     }
     if (f.top === 'none') { // kaal bovenlijf van de achtervolger: navel en buikplooi
       ell(c, dF * 0.85 + bellyX * 0.55, -3, 1.2, 1.6, shade(skin, 0.6));
@@ -281,6 +309,7 @@ function drawChar(c, f, x, y, o = {}) {
     const rx = 7.6, ry = 8.8, sway = o.sway !== undefined ? o.sway : Math.sin(ph) * 1.8 * (pose === 'run' ? 1 : 0);
     // nek
     limb(c, neckBase.x, neckBase.y, hd.x, hd.y + 2, 3.5 * (fem ? 0.9 : 1) * (bm > 1 ? 1.1 : 1), 3.3, shade(skin, 0.88));
+    ell(c, hd.x + 0.5, hd.y + 9.2, 5.2, 2.3, 'rgba(0,0,0,.18)'); // schaduw van de kin op de hals
     c.save(); c.translate(hd.x, hd.y); c.rotate(lean * 0.35 + J.tilt * 0.5 + (faint ? 0 : 0));
     const hl = shade(hairCol, 1.25);
     const fimg = f.face ? faceImage(f.face) : null, photo = !!(fimg && fimg.complete && fimg.naturalWidth);
@@ -325,6 +354,8 @@ function drawChar(c, f, x, y, o = {}) {
     // neus
     c.fillStyle = shade(skin, 0.97); c.strokeStyle = shade(skin, 0.75); c.lineWidth = 0.6;
     c.beginPath(); c.moveTo(rx - 0.8, -2); c.quadraticCurveTo(rx + 3, 1.8, rx - 0.2, 3.5); c.lineTo(rx - 1.4, 3.1); c.closePath(); c.fill(); c.stroke();
+    ell(c, rx - 0.3, 3.6, 1.3, 0.7, 'rgba(60,20,10,.28)'); ell(c, rx - 1.7, 3.1, 0.55, 0.5, 'rgba(40,10,5,.55)'); // neusschaduw en neusgat
+    c.strokeStyle = 'rgba(0,0,0,.07)'; c.lineWidth = 1; c.beginPath(); c.arc(1, 1, 7.6, 0.6, 1.9); c.stroke(); // kaaklijn
     // mond
     const smile = pose === 'cheer';
     if (faint) { ell(c, 5.8, 6.2, 1.5, 2, '#5a1a1a'); }
@@ -332,6 +363,7 @@ function drawChar(c, f, x, y, o = {}) {
     else {
       c.strokeStyle = fem ? '#b8344a' : '#8a4a42'; c.lineWidth = fem ? 1.9 : 1.1;
       c.beginPath(); c.moveTo(4.2, 6); c.quadraticCurveTo(5.8, smile ? 8 : 6.5, 7.4, smile ? 5.2 : 5.6); c.stroke();
+      ell(c, 6, smile ? 7 : 6.9, fem ? 2.2 : 1.8, fem ? 0.9 : 0.6, fem ? 'rgba(200,60,85,.85)' : 'rgba(170,95,85,.6)'); ell(c, 5.7, 5.5, fem ? 1.9 : 1.5, 0.45, fem ? 'rgba(160,30,60,.7)' : 'rgba(120,60,50,.5)');
       if (smile) { c.fillStyle = '#fff'; c.beginPath(); c.moveTo(4.8, 6.1); c.quadraticCurveTo(6, 7.6, 7.2, 5.6); c.closePath(); c.fill(); }
     }
     // oog + wenkbrauw
@@ -361,6 +393,9 @@ function drawChar(c, f, x, y, o = {}) {
     } else if (st !== 'bald') {
       cap(st === 'quiff' ? 2.5 : st === 'curly' ? 1.5 : st === 'afro' ? 1 : 0.2, st === 'short' || st === 'quiff' ? 0 : 0.6);
       c.fillStyle = hg2; c.fill();
+      c.save(); c.globalAlpha = 0.32; c.lineWidth = 0.7; // haarstrengen
+      for (let i = 0; i < 7; i++) { c.strokeStyle = i % 2 ? hairDark : hl; c.beginPath(); c.moveTo(-1 + i * 0.8, -ry - 1.5); c.quadraticCurveTo(-3 - i * 1.3, -ry + 3, -rx - 0.5 + i * 0.7, 0.5 + i * 0.7); c.stroke(); }
+      c.restore();
       if (st === 'quiff') ell(c, 3.5, -ry - 2.4, 5, 3.4, hl, -0.25);
       if (st === 'curly') for (let n = 0; n < 7; n++) { const an = Math.PI * (1.02 + n * 0.14); ell(c, Math.cos(an) * 8.6 - 0.5, Math.sin(an) * 9.4 - 0.5, 3.3, 3.3, n % 2 ? hairCol : hl); }
       if (st === 'long' || st === 'bob') ell(c, -2.6, 4 + (st === 'long' ? 3 : 0), 2.3, st === 'long' ? 11 : 7, hairCol);
