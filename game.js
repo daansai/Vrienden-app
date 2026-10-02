@@ -17,6 +17,7 @@ const DEFAULT_FRIENDS = [{ id: 1, name: 'Speler' }];
 let friends = store.get('friends', DEFAULT_FRIENDS).map(normalize);
 let selectedId = store.get('selected', friends[0].id);
 let mode = 1; // 1 = bier, 2 = wijn: volgt het drankje van de speler die aan de beurt is
+const DRINK_ICON = { 1: '🍺', 2: '🍷', 3: '🍹' };
 const FINISH = 3000; // elk spel stopt na 3000 meter
 const bestKey = () => 'best' + mode;
 let best = store.get(bestKey(), 0);
@@ -24,6 +25,7 @@ let best = store.get(bestKey(), 0);
 // drain = hoeveel van het glas er per flesje/wijnglas uitgaat, refill = hoeveel een shotje bijvult
 const MODES = {
   1: { name: 'Bierflesjes', base: 330, grow: 9, max: 780, drain: 0.02, refill: 0.08 },
+  3: { name: 'Cocktails', base: 330, grow: 9, max: 780, drain: 0.012, refill: 0.08 }, // zelfde tempo als bier, maar er gaat veel minder uit het glas
   2: { name: 'Wijnglazen', base: 330, grow: 9, max: 780, drain: 0.045, refill: 0.09 } // zelfde tempo als bier; wijn is sterker, dus het glas gaat sneller leeg
 };
 
@@ -40,7 +42,7 @@ function renderRoster() {
     const d = document.createElement('div'); d.className = 'card' + (pos >= 0 ? ' sel' : '');
     const cc = document.createElement('canvas'); cc.width = 80; cc.height = 120;
     drawChar(cc.getContext('2d'), f, 40, 112, { pose: 'idle', scale: 1.1, shadow: false });
-    const n = document.createElement('div'); n.textContent = f.name + (f.drink === 'wine' ? ' 🍷' : ' 🍺');
+    const n = document.createElement('div'); n.textContent = f.name + ' ' + DRINK_ICON[f.drink === 'wine' ? 2 : f.drink === 'cocktail' ? 3 : 1];
     const num = document.createElement('span'); num.className = 'num'; num.textContent = pos >= 0 ? pos + 1 : '';
     const e = document.createElement('button'); e.className = 'edit'; e.textContent = '✎'; e.setAttribute('aria-label', 'Aanpassen');
     e.onclick = ev => { ev.stopPropagation(); openEditor(f); };
@@ -49,8 +51,8 @@ function renderRoster() {
     r.appendChild(d);
   }
   $('btnPlay').textContent = chosen.length > 1 ? `Spelen met ${chosen.length} spelers` : 'Spelen';
-  const b1 = store.get('best1', 0), b2 = store.get('best2', 0);
-  $('best').textContent = (b1 || b2) ? `Highscores: 🍺 ${b1} m · 🍷 ${b2} m` : '';
+  const b1 = store.get('best1', 0), b2 = store.get('best2', 0), b3 = store.get('best3', 0);
+  $('best').textContent = (b1 || b2 || b3) ? `Highscores: 🍺 ${b1} m · 🍷 ${b2} m · 🍹 ${b3} m` : '';
 }
 
 /* ---------- poppetjes-maker ---------- */
@@ -212,7 +214,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const BOUNCER = normalize({ id: -1, name: 'Beveiliger', gender: 'm', height: 'tall', build: 'broad', skin: SKIN[3], eyes: EYES[5], style: 'bald', hair: HAIR[0], beard: 'stubble', glasses: 'sun', top: 'blazer', topColor: '#15151c', bottom: 'chinos', bottomColor: '#15151c', shoes: '#0a0a0a', chest: 78, belly: 72, butt: 60, posture: 'upright' });
 
 function initRun(f) {
-  mode = f.drink === 'wine' ? 2 : 1;
+  mode = f.drink === 'wine' ? 2 : f.drink === 'cocktail' ? 3 : 1;
   best = store.get(bestKey(), 0);
   player = { x: 150, y: GROUND, vy: 0, on: true, duck: false, f };
   obstacles = []; items = []; popups = []; confetti = []; dust = [];
@@ -251,8 +253,8 @@ function pop(text, x, y, color) { popups.push({ text, x, y, color, t: 0 }); }
 function spawn() {
   const r = Math.random(), x = W + 40;
   let o;
-  if (!bonus && !finishObj && score >= nextVatAt && score < FINISH - 300) { // open vat: spring erin voor een bonusomgeving
-    o = { type: 'vat', x, w: 76, h: 86, y: GROUND - 86, liquid: mode === 2 ? 'wine' : 'beer' }; nextVatAt = score + rnd(250, 450);
+  if (!bonus && !finishObj && score >= nextVatAt && score < FINISH - 330) { // open vat: spring erin voor een bonusomgeving
+    o = { type: 'vat', x, w: 76, h: 86, y: GROUND - 86, liquid: mode === 2 ? 'wine' : mode === 3 ? 'cocktail' : 'beer' }; nextVatAt = score + rnd(250, 450);
   } else if (r < 0.2) o = { type: 'barrel', x, w: 50, h: 46, y: GROUND - 46 };
   else if (r < 0.32) o = { type: 'shards', x, w: 66, h: 30, y: GROUND - 30 };
   else if (r < 0.44) o = { type: 'crates', x, w: 44, h: 78, y: GROUND - 78 };
@@ -295,11 +297,11 @@ function collect(c) {
     if (level <= 0) win();
   }
 }
-function enterBonus(o) { // in het vat gesprongen: 100 meter wijnkelder of brouwerij
-  bonus = { until: score + 100 }; bonusKind = o.liquid; zone = 0; flash = 1; flashCol = o.liquid === 'wine' ? '#8a1c40' : '#f4b01c';
-  for (let i = 0; i < 28; i++) dust.push({ x: o.x + o.w / 2, y: o.y, vx: rnd(-170, 170), vy: rnd(-340, -120), t: 0, r: rnd(2, 5), g: true, col: o.liquid === 'wine' ? '170,30,75' : '245,175,30' });
+function enterBonus(o) { // in het vat gesprongen: 250 meter wijnkelder, brouwerij of cocktailbar
+  bonus = { until: score + 250 }; bonusKind = o.liquid; zone = 0; flash = 1; flashCol = { wine: '#8a1c40', beer: '#f4b01c', cocktail: '#ff3d81' }[o.liquid];
+  for (let i = 0; i < 28; i++) dust.push({ x: o.x + o.w / 2, y: o.y, vx: rnd(-170, 170), vy: rnd(-340, -120), t: 0, r: rnd(2, 5), g: true, col: { wine: '170,30,75', beer: '245,175,30', cocktail: '255,70,140' }[o.liquid] });
   obstacles = []; items = []; bouncer = null; bouncerIn = rnd(26, 40); spawnIn = 1.6; player.y = GROUND; player.vy = 0; player.on = true; shake = 0.2;
-  pop(o.liquid === 'wine' ? 'Wijnkelder! 100 meter' : 'Brouwerij! 100 meter', W / 2 - 70, 130, '#ffd43b');
+  pop({ wine: 'Wijnkelder! 250 meter', beer: 'Brouwerij! 250 meter', cocktail: 'Cocktailbar! 250 meter' }[o.liquid], W / 2 - 80, 130, '#ffd43b');
 }
 function faintNow() {
   state = 'faint'; faintT = 0; shake = 0.3;
@@ -328,7 +330,7 @@ function showResult(kind) {
     title: won ? 'Gewonnen! 🍻' : fin ? 'Finish! 🏁' : 'Flauwgevallen! 😵',
     text: (won ? 'Je glas is leeg! ' : fin ? `Je hebt de ${FINISH} meter gehaald! ` : '') + `Afstand ${dist} m · ${MODES[mode].name}: ${itemCount}`,
     // verloren: wat er nog in het glas zit moet worden opgedronken
-    drink: won ? '' : `${mode === 1 ? '🍺' : '🍷'} ${player.f.name}, drink je glas op! Er zit nog ${left}% in.`
+    drink: won ? '' : `${DRINK_ICON[mode]} ${player.f.name}, drink je glas op! Er zit nog ${left}% in.`
   };
   if (n === 1) setOver(Object.assign(base, { text: base.text + ` · Highscore ${best} m`, label: 'Opnieuw spelen', fn: prepareTurn }));
   else if (!last) {
@@ -340,7 +342,8 @@ function showResult(kind) {
 // natuurkunde: zwaartekracht, grond en tafels om op te landen
 function stepPhysics(dt, fastFall) {
   const prev = player.y;
-  player.vy += (fastFall && !player.on ? 4200 : 2300) * dt;
+  if (fastFall && !player.on) player.vy = Math.max(player.vy, 1100); // bukken in de lucht: meteen omlaag
+  player.vy += 2300 * dt;
   player.y += player.vy * dt;
   let land = GROUND;
   if (player.vy >= 0) for (const o of obstacles) {
@@ -403,7 +406,7 @@ function update(dt) {
   const nz = bonus ? 0 : Math.floor(score / 150) % 2; // elke 150 m wisselt het café tussen bar en dansvloer
   if (nz !== zone) { zone = nz; pop(zone ? 'Dansvloer!' : 'Terug in het café', W / 2 - 50, 130, '#ff9de2'); }
   bouncerIn -= dt;
-  if (!bouncer && bouncerIn <= 0 && score < FINISH - 150) { bouncer = { x: -90, ph: 0, age: 0, state: 'chase', fallT: 0, target: null, idle: false }; bouncerIn = rnd(26, 40); }
+  if (!bouncer && !bonus && bouncerIn <= 0 && score < FINISH - 150) { bouncer = { x: -90, ph: 0, age: 0, state: 'chase', fallT: 0, target: null, idle: false }; bouncerIn = rnd(26, 40); }
   updateBouncer(dt);
   if (score < FINISH - 15) { spawnIn -= dt; if (spawnIn <= 0) spawn(); } // vlak voor de finish komen er geen obstakels meer
   if (!finishObj && score >= FINISH - 10) finishObj = { x: W + 40 };
@@ -448,6 +451,35 @@ function drawBottle(x, y, k = 1) { // groen bierflesje
   ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(-4.6, -14, 1.6, 8); ctx.fillRect(-4.6, -2, 1.6, 3);
   ctx.restore();
 }
+function drawCocktail(x, y, w, h, lv) { // groot cocktailglas met rietje, parasolletje en limoen; lv = vulling 0..1
+  const cx = x + w / 2, bowlH = h * 0.5;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(cx, y + h + 1, w * 0.36, 2.5, 0, 0, 7); ctx.fill();
+  const bowl = () => { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.bezierCurveTo(x + w * 0.98, y + bowlH * 0.6, x + w * 0.62, y + bowlH * 0.98, cx + w * 0.07, y + bowlH); ctx.lineTo(cx - w * 0.07, y + bowlH); ctx.bezierCurveTo(x + w * 0.38, y + bowlH * 0.98, x + w * 0.02, y + bowlH * 0.6, x, y); ctx.closePath(); };
+  // rietje achter het glas
+  ctx.strokeStyle = '#e8283c'; ctx.lineWidth = Math.max(2, w * 0.06); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx + w * 0.12, y + bowlH * 0.8); ctx.lineTo(x + w * 0.78, y - h * 0.22); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.setLineDash([w * 0.08, w * 0.08]); ctx.stroke(); ctx.setLineDash([]);
+  bowl(); ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fill();
+  if (lv > 0.01) {
+    ctx.save(); bowl(); ctx.clip();
+    const top = y + bowlH - lv * bowlH * 0.9;
+    const g = ctx.createLinearGradient(0, top, 0, y + bowlH); g.addColorStop(0, '#ffb347'); g.addColorStop(0.5, '#ff6b9d'); g.addColorStop(1, '#c2185b');
+    ctx.fillStyle = g; ctx.fillRect(x, top, w, bowlH);
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(x + w * 0.2, top + 3, w * 0.16, w * 0.16); ctx.fillRect(x + w * 0.55, top + 2, w * 0.15, w * 0.15);
+    ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.ellipse(cx, top, w * 0.45, 2, 0, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+  bowl(); ctx.strokeStyle = 'rgba(235,245,255,.9)'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, y + bowlH); ctx.lineTo(cx, y + h - 3); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(cx, y + h - 2, w * 0.3, 2.4, 0, 0, 7); ctx.stroke();
+  // limoen op de rand en parasolletje
+  ctx.fillStyle = '#7ed321'; ctx.strokeStyle = '#3d7a0a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x + w * 0.1, y, w * 0.13, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x + w * 0.3, y + bowlH * 0.5); ctx.lineTo(x + w * 0.42, y - h * 0.2); ctx.stroke();
+  ctx.fillStyle = '#ff4d8d'; ctx.beginPath(); ctx.arc(x + w * 0.42, y - h * 0.2, w * 0.2, Math.PI, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffd43b'; ctx.beginPath(); ctx.arc(x + w * 0.42, y - h * 0.2, w * 0.2, Math.PI * 1.35, Math.PI * 1.65); ctx.lineTo(x + w * 0.42, y - h * 0.2); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x + w * 0.1, y + 3); ctx.quadraticCurveTo(x + w * 0.1, y + bowlH * 0.5, x + w * 0.3, y + bowlH * 0.8); ctx.stroke();
+  ctx.restore();
+}
 function drawWine(x, y, w, h, lv) { // wijnglas, lv = vulling 0..1
   const cx = x + w / 2, bowlH = h * 0.52;
   ctx.save();
@@ -483,6 +515,7 @@ function drawShot(x, y, k = 1) { // shotglaasje
 function drawItem(c, bob = 0) {
   if (c.type === 'shot') drawShot(c.x, c.y + bob, 1.25);
   else if (mode === 1) drawBottle(c.x, c.y + bob);
+  else if (mode === 3) drawCocktail(c.x - 12, c.y + bob - 20, 24, 40, 0.55);
   else drawWine(c.x - 11, c.y + bob - 19, 22, 38, 0.42);
 }
 function drawObstacle(o) {
@@ -511,6 +544,27 @@ function drawObstacle(o) {
       ctx.beginPath(); ctx.moveTo(sx, o.h - 2); ctx.lineTo(sx + sw * 0.45, o.h - sh_); ctx.lineTo(sx + sw, o.h - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(sx + sw * 0.4, o.h - sh_ + 4); ctx.lineTo(sx + sw * 0.3, o.h - 6); ctx.stroke();
     }
+  } else if (o.type === 'vat' && o.liquid === 'cocktail') { // reuzecocktail: springen maar!
+    const cx = o.w / 2;
+    const gl = ctx.createRadialGradient(cx, -6, 4, cx, -6, 75); gl.addColorStop(0, 'rgba(255,90,170,.45)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl; ctx.fillRect(-60, -80, o.w + 120, 140);
+    ctx.strokeStyle = '#e8283c'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx + 6, 40); ctx.lineTo(o.w - 4, -22); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 6; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+    const bowl = () => { ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(o.w, 6); ctx.bezierCurveTo(o.w - 2, 36, o.w * 0.66, 52, cx + 5, 54); ctx.lineTo(cx - 5, 54); ctx.bezierCurveTo(o.w * 0.34, 52, 2, 36, 0, 6); ctx.closePath(); };
+    bowl(); ctx.fillStyle = 'rgba(255,255,255,.16)'; ctx.fill();
+    ctx.save(); bowl(); ctx.clip();
+    const lg = ctx.createLinearGradient(0, 8, 0, 54); lg.addColorStop(0, '#ffb347'); lg.addColorStop(0.55, '#ff6b9d'); lg.addColorStop(1, '#c2185b'); ctx.fillStyle = lg; ctx.fillRect(0, 10, o.w, 50);
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(14, 14, 11, 11); ctx.fillRect(40, 12, 10, 10); ctx.fillRect(56, 18, 9, 9);
+    ctx.restore();
+    bowl(); ctx.strokeStyle = 'rgba(235,245,255,.95)'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, 54); ctx.lineTo(cx, o.h - 6); ctx.stroke(); ctx.beginPath(); ctx.ellipse(cx, o.h - 4, 26, 5, 0, 0, 7); ctx.stroke();
+    ctx.fillStyle = '#7ed321'; ctx.strokeStyle = '#3d7a0a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(8, 6, 10, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(24, 30); ctx.lineTo(30, -10); ctx.stroke();
+    ctx.fillStyle = '#ff4d8d'; ctx.beginPath(); ctx.arc(30, -10, 15, Math.PI, 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd43b'; ctx.beginPath(); ctx.arc(30, -10, 15, Math.PI * 1.35, Math.PI * 1.65); ctx.lineTo(30, -10); ctx.closePath(); ctx.fill();
+    const by = -52 + Math.sin(time * 6 + o.x * 0.02) * 5;
+    ctx.fillStyle = '#ffd43b'; ctx.strokeStyle = '#7a5200'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 9, by); ctx.lineTo(cx + 9, by); ctx.lineTo(cx, by + 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = '800 13px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('Spring erin!', cx, by - 6); ctx.textAlign = 'left';
   } else if (o.type === 'vat') {
     const wine = o.liquid === 'wine', cx = o.w / 2;
     const gl = ctx.createRadialGradient(cx, -6, 4, cx, -6, 70); gl.addColorStop(0, wine ? 'rgba(255,110,160,.4)' : 'rgba(255,215,110,.45)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
@@ -590,7 +644,7 @@ function drawGlassHUD() {
   ctx.save();
   ctx.translate(gx + 34, gy + 66); ctx.scale(sc, sc); ctx.translate(-(gx + 34), -(gy + 66));
   if (pulse > 0) { ctx.shadowColor = '#7ee08a'; ctx.shadowBlur = 18 * pulse; }
-  if (mode === 1) drawBeerGlass(gx, gy, 68, 132, dispLevel); else drawWine(gx - 2, gy, 72, 132, dispLevel);
+  if (mode === 1) drawBeerGlass(gx, gy, 68, 132, dispLevel); else if (mode === 3) drawCocktail(gx - 4, gy + 28, 76, 104, dispLevel); else drawWine(gx - 2, gy, 72, 132, dispLevel);
   ctx.restore();
   // niveau-aanduiding
   ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.roundRect(gx - 4, gy + 140, 76, 22, 11); ctx.fill();
@@ -777,6 +831,51 @@ function drawBrewery() { // brouwerij: koperen ketels, stalen tanks, leidingen e
   const po = bgX % 380; for (let x = -380; x < W + 380; x += 380) { ctx.fillStyle = 'rgba(255,246,223,.8)'; ctx.beginPath(); ctx.ellipse(x - po + 190, GROUND + 26, 50, 7, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(240,170,40,.45)'; ctx.beginPath(); ctx.ellipse(x - po + 190, GROUND + 28, 38, 4, 0, 0, 7); ctx.fill(); }
   ctx.fillStyle = 'rgba(255,170,60,.08)'; ctx.fillRect(0, 0, W, H);
 }
+function drawCocktailBar() { // cocktailbar: neon, verlichte flessen, lichtsnoeren en een glanzende vloer
+  let g = ctx.createLinearGradient(0, 0, 0, GROUND); g.addColorStop(0, '#120826'); g.addColorStop(1, '#2d1457'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, GROUND);
+  let off = (bgX * 0.35) % 300;
+  const COLS = ['#ff3d81', '#00e5ff', '#ffd43b', '#7cff6b', '#b46bff'];
+  // verlichte flessenplanken
+  for (let i = -1; i < 4; i++) {
+    const x = i * 300 - off + 20, k = Math.floor((bgX * 0.35) / 300) + i;
+    const bl = ctx.createLinearGradient(0, 80, 0, 190); bl.addColorStop(0, 'rgba(255,61,129,.0)'); bl.addColorStop(0.5, 'rgba(255,61,129,.22)'); bl.addColorStop(1, 'rgba(0,229,255,.0)'); ctx.fillStyle = bl; ctx.fillRect(x - 10, 80, 250, 120);
+    for (const sy of [120, 190]) {
+      ctx.fillStyle = '#0a0414'; ctx.fillRect(x, sy + 24, 230, 6); ctx.fillStyle = 'rgba(0,229,255,.7)'; ctx.fillRect(x, sy + 30, 230, 2);
+      for (let j = 0; j < 7; j++) { const bx = x + 14 + j * 32, col = COLS[(((k * 3 + j + (sy > 150 ? 2 : 0)) % 5) + 5) % 5]; ctx.fillStyle = col; ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.roundRect(bx - 7, sy - 8, 14, 32, 4); ctx.fill(); ctx.fillRect(bx - 3, sy - 22, 6, 16); ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(bx - 5, sy - 4, 2, 18); }
+    }
+  }
+  // neonbord
+  off = (bgX * 0.5) % 640;
+  for (let i = -1; i < 2; i++) {
+    const x = i * 640 - off + 300, fl = 0.8 + 0.2 * Math.sin(time * 9 + i);
+    ctx.save(); ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 22 * fl; ctx.fillStyle = `rgba(160,250,255,${fl})`; ctx.font = "400 40px 'Lilita One', Nunito, system-ui, sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('COCKTAILS', x, 62);
+    ctx.shadowColor = '#ff3d81'; ctx.strokeStyle = '#ff7ab5'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 90, 90); ctx.lineTo(x + 90, 90); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 14, 98); ctx.lineTo(x + 14, 98); ctx.lineTo(x, 118); ctx.closePath(); ctx.moveTo(x, 118); ctx.lineTo(x, 132); ctx.moveTo(x - 9, 132); ctx.lineTo(x + 9, 132); ctx.stroke();
+    ctx.restore(); ctx.textAlign = 'left';
+  }
+  // lichtsnoeren
+  off = (bgX * 0.5) % 200;
+  ctx.strokeStyle = '#05020c'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = -200; x < W + 200; x += 8) { const xx = x - off, yy = 14 + Math.abs(Math.sin((xx + 200) / 200 * Math.PI)) * 22; if (x === -200) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy); } ctx.stroke();
+  for (let x = -200; x < W + 200; x += 40) { const xx = x - off, yy = 14 + Math.abs(Math.sin((xx + 200) / 200 * Math.PI)) * 22, col = COLS[((Math.floor((x + bgX * 0.5) / 40) % 5) + 5) % 5]; const gl = ctx.createRadialGradient(xx, yy + 5, 1, xx, yy + 5, 16); gl.addColorStop(0, col); gl.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gl; ctx.fillRect(xx - 16, yy - 11, 32, 32); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xx, yy + 5, 2.5, 0, 7); ctx.fill(); }
+  // bar met neonrand en barkrukken
+  g = ctx.createLinearGradient(0, 252, 0, GROUND); g.addColorStop(0, '#3b2060'); g.addColorStop(1, '#1a0d33'); ctx.fillStyle = g; ctx.fillRect(0, 252, W, GROUND - 252);
+  ctx.fillStyle = '#6a4aa0'; ctx.fillRect(0, 252, W, 7); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(0, 252, W, 2);
+  ctx.save(); ctx.shadowColor = '#ff3d81'; ctx.shadowBlur = 14; ctx.fillStyle = '#ff7ab5'; ctx.fillRect(0, GROUND - 14, W, 3); ctx.restore();
+  off = (bgX * 0.7) % 230;
+  for (let x = -230; x < W + 230; x += 230) {
+    const sx = x - off + 115, col = COLS[((Math.floor((x + bgX * 0.7) / 230) % 5) + 5) % 5];
+    ctx.strokeStyle = '#0a0414'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, 300); ctx.lineTo(sx, 336); ctx.stroke();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(sx, 298, 17, 6, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(sx - 5, 296, 8, 2, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#0a0414'; ctx.beginPath(); ctx.ellipse(sx, 337, 13, 3, 0, 0, 7); ctx.fill();
+  }
+  // glanzende vloer met neonweerspiegeling
+  g = ctx.createLinearGradient(0, GROUND, 0, H); g.addColorStop(0, '#241040'); g.addColorStop(1, '#0a0418'); ctx.fillStyle = g; ctx.fillRect(0, GROUND, W, H - GROUND);
+  ctx.fillStyle = '#0a0414'; ctx.fillRect(0, GROUND, W, 4);
+  const base = Math.floor(bgX / 50), ox = bgX % 50;
+  for (let i = -1; i < 18; i++) for (let r = 0; r < 2; r++) if ((base + i + r) % 2 === 0) { ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.fillRect(i * 50 - ox, GROUND + 4 + r * 50, 50, 50); }
+  for (let i = 0; i < 4; i++) { const rx = ((i * 260 - bgX * 0.9) % 1040 + 1040) % 1040 - 120, rg = ctx.createLinearGradient(rx, GROUND, rx + 80, H); rg.addColorStop(0, i % 2 ? 'rgba(255,61,129,.28)' : 'rgba(0,229,255,.25)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.fillRect(rx, GROUND + 4, 70, H - GROUND); }
+  ctx.fillStyle = 'rgba(140,60,220,.08)'; ctx.fillRect(0, 0, W, H);
+}
 function drawFinish() { // finishboog met geblokte vlag
   const x = finishObj.x, top = GROUND - 190;
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x + 60, GROUND + 2, 70, 6, 0, 0, 7); ctx.fill();
@@ -843,11 +942,11 @@ function drawHUD() {
   const ds = String(Math.floor(score)), dw = ctx.measureText(ds).width;
   ctx.fillText(ds, BADGE.x + 46, BADGE.y + 22);
   ctx.fillStyle = '#e9c88a'; ctx.font = '700 13px Nunito, system-ui, sans-serif'; ctx.fillText('m', BADGE.x + 50 + dw, BADGE.y + 25);
-  if (mode === 1) drawBottle(197, 31, 0.6); else drawWine(189, 17, 16, 28, 0.4);
+  if (mode === 1) drawBottle(197, 31, 0.6); else if (mode === 3) drawCocktail(187, 15, 20, 32, 0.5); else drawWine(189, 17, 16, 28, 0.4);
   ctx.fillStyle = '#fff'; ctx.font = '800 21px Nunito, system-ui, sans-serif'; ctx.fillText(itemCount, 216, 32);
   ctx.textAlign = 'right'; ctx.font = '700 14px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#ffe9b8'; ctx.fillText('Best ' + best + ' m', W - 16, 30); ctx.textAlign = 'left';
   if (bonus) {
-    const txt = (bonusKind === 'wine' ? '🍷 Wijnkelder' : '🍺 Brouwerij') + ` · nog ${Math.max(0, Math.ceil(bonus.until - score))} m`;
+    const txt = { wine: '🍷 Wijnkelder', beer: '🍺 Brouwerij', cocktail: '🍹 Cocktailbar' }[bonusKind] + ` · nog ${Math.max(0, Math.ceil(bonus.until - score))} m`;
     ctx.font = '800 14px Nunito, system-ui, sans-serif'; const tw = ctx.measureText(txt).width + 28; pill(W / 2 - tw / 2, 12, tw, 28);
     ctx.fillStyle = '#ffe9b8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, W / 2, 27); ctx.textAlign = 'left';
   }
@@ -880,7 +979,7 @@ function drawStars(cx, cy, t) {
 function renderScene(ts) {
   if (state === 'play') bgX += speed * (1 / 60);
   drawBg();
-  if (bonusBlend > 0.01) { ctx.globalAlpha = Math.min(1, bonusBlend); if (bonusKind === 'wine') drawCellar(); else drawBrewery(); ctx.globalAlpha = 1; }
+  if (bonusBlend > 0.01) { ctx.globalAlpha = Math.min(1, bonusBlend); if (bonusKind === 'wine') drawCellar(); else if (bonusKind === 'cocktail') drawCocktailBar(); else drawBrewery(); ctx.globalAlpha = 1; }
   if (state === 'menu') { vignette(); return; }
   if (zoneBlend * (1 - bonusBlend) > 0.01) drawDisco(zoneBlend * (1 - bonusBlend));
   for (const m of motes) { ctx.fillStyle = `rgba(255,236,170,${0.25 + 0.2 * Math.sin(time * 2 + m.p)})`; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 7); ctx.fill(); }
@@ -892,8 +991,8 @@ function renderScene(ts) {
   if (state === 'ready' || state === 'finished') pose = 'idle';
   else if (fa) pose = 'faint';
   else if (state === 'won') { pose = 'cheer'; py = player.y - Math.abs(Math.sin(wonT * 7)) * 18; }
-  else if (!player.on) pose = 'jump';
-  else if (player.duck && player.on) pose = 'duck';
+  else if (!player.on && !player.duck) pose = 'jump';
+  else if (player.duck) pose = 'duck'; // ook in de lucht: opgevouwen naar beneden
   for (const d of dust) { ctx.fillStyle = `rgba(${d.col || '214,186,150'},${0.55 * (1 - d.t / 0.6)})`; ctx.beginPath(); ctx.arc(d.x, d.y, d.r * (1 + d.t * 2), 0, 7); ctx.fill(); }
   if (bouncer) drawBouncer();
   const dI = Math.min(1, drunk / 2);
@@ -908,7 +1007,7 @@ function renderScene(ts) {
   if (state === 'play' && hintT < 5) {
     ctx.globalAlpha = Math.min(1, 5 - hintT); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.roundRect(W / 2 - 250, 70, 500, 30, 15); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.font = '15px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(mode === 1 ? 'Pak flesjes om je bier leeg te drinken · shotjes vullen weer bij' : 'Pak wijnglazen om je wijn leeg te drinken · shotjes vullen weer bij', W / 2, 85);
+    ctx.fillText({ 1: 'Pak flesjes om je bier leeg te drinken', 2: 'Pak wijnglazen om je wijn leeg te drinken', 3: 'Pak cocktails om je cocktail leeg te drinken' }[mode] + ' · shotjes vullen weer bij', W / 2, 85);
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
   if (state === 'play') { ctx.fillStyle = '#ffc933'; ctx.font = 'bold 14px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(player.f.name, player.x, player.y - 112 * ({ short: .92, normal: 1, tall: 1.07 }[player.f.height] || 1)); ctx.textAlign = 'left'; }
