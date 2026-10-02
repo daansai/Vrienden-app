@@ -56,65 +56,92 @@ function renderRoster() {
 }
 
 /* ---------- poppetjes-maker ---------- */
+const TOPC = ['#3b82f6', '#e63946', '#2a9d8f', '#f4a261', '#ffffff', '#1d1d1f', '#8e44ad', '#f1c40f', '#6c757d', '#e84393', '#5dade2', '#7d6608'];
+const BOTC = ['#5b7fb5', '#2f4a7a', '#1c2a4a', '#1a1a1d', '#6b6f78', '#e8e8ea', '#b7a37a', '#59623a', '#8a4a2a'];
+const SHOEC = ['#f1f1f1', '#1a1a1d', '#8a4a2a', '#d6232a', '#2f4a7a', '#e8c547'];
+// Tabs met grote keuzeknoppen: sneller dan lange lijsten
 const SCHEMA = [
-  { sec: 'Algemeen', items: [
-    { k: 'name', t: 'text', l: 'Naam' }, { k: 'drink', t: 'sel', l: 'Wat drink je?' }, { k: 'gender', t: 'sel', l: 'Man of vrouw' },
-    { k: 'height', t: 'sel', l: 'Lengte' }, { k: 'build', t: 'sel', l: 'Postuur' }, { k: 'posture', t: 'sel', l: 'Houding' }] },
-  { sec: 'Lichaamsvorm', items: [
+  { sec: 'Basis', items: [
+    { k: 'name', t: 'text', l: 'Naam' }, { k: 'drink', t: 'chips', l: 'Wat drink je?' }, { k: 'gender', t: 'chips', l: 'Man of vrouw' },
+    { k: 'height', t: 'chips', l: 'Lengte' }, { k: 'build', t: 'chips', l: 'Postuur' }, { k: 'posture', t: 'chips', l: 'Houding' }] },
+  { sec: 'Lichaam', items: [
     { k: 'hump', t: 'rng', l: 'Bochel', lo: 'geen', hi: 'groot' }, { k: 'chest', t: 'rng', l: 'Borst', lo: 'plat', hi: 'groot' },
     { k: 'belly', t: 'rng', l: 'Buik', lo: 'plat', hi: 'dik' }, { k: 'butt', t: 'rng', l: 'Billen', lo: 'klein', hi: 'groot' }] },
   { sec: 'Gezicht', items: [
     { k: 'skin', t: 'sw', l: 'Huidskleur', c: SKIN }, { k: 'eyes', t: 'sw', l: 'Oogkleur', c: EYES },
-    { k: 'beard', t: 'sel', l: 'Baard en snor' }, { k: 'glasses', t: 'sel', l: 'Bril' }] },
-  { sec: 'Haar', items: [{ k: 'style', t: 'sel', l: 'Kapsel' }, { k: 'hair', t: 'sw', l: 'Haarkleur', c: HAIR }] },
+    { k: 'beard', t: 'chips', l: 'Baard en snor' }, { k: 'glasses', t: 'chips', l: 'Bril' }] },
+  { sec: 'Haar', items: [{ k: 'style', t: 'chips', l: 'Kapsel' }, { k: 'hair', t: 'sw', l: 'Haarkleur', c: HAIR }] },
   { sec: 'Kleding', items: [
-    { k: 'top', t: 'sel', l: 'Bovenkant' }, { k: 'topColor', t: 'col', l: 'Kleur bovenkant' },
-    { k: 'bottom', t: 'sel', l: 'Onderkant' }, { k: 'bottomColor', t: 'col', l: 'Kleur onderkant' },
-    { k: 'shoes', t: 'col', l: 'Schoenen' }, { k: 'hat', t: 'sel', l: 'Hoofddeksel' }] }
+    { k: 'top', t: 'chips', l: 'Bovenkant' }, { k: 'topColor', t: 'sw', l: 'Kleur bovenkant', c: TOPC, custom: true },
+    { k: 'bottom', t: 'chips', l: 'Onderkant' }, { k: 'bottomColor', t: 'sw', l: 'Kleur onderkant', c: BOTC, custom: true },
+    { k: 'shoes', t: 'sw', l: 'Schoenen', c: SHOEC, custom: true }, { k: 'hat', t: 'chips', l: 'Hoofddeksel' }] },
+  { sec: 'Foto', items: [] }
 ];
-let draft = null, editingNew = false, edPose = 'run';
-const controls = {};
+let draft = null, editingNew = false, edPose = 'run', activeTab = 'Basis';
+const controls = {}, panes = {};
 
 function buildForm() {
   const form = $('form'); form.innerHTML = '';
+  const bar = document.createElement('div'); bar.className = 'tabs';
   for (const sec of SCHEMA) {
-    const fs = document.createElement('fieldset'), lg = document.createElement('legend'); lg.textContent = sec.sec; fs.appendChild(lg);
+    const tb = document.createElement('button'); tb.type = 'button'; tb.className = 'tab'; tb.textContent = sec.sec; tb.dataset.tab = sec.sec; tb.onclick = () => showTab(sec.sec); bar.appendChild(tb);
+    const pane = document.createElement('div'); pane.className = 'pane'; pane.hidden = true; panes[sec.sec] = pane;
     for (const it of sec.items) {
       const w = document.createElement('div'); w.className = 'fld';
       const lab = document.createElement('label'); lab.textContent = it.l; lab.htmlFor = 'f_' + it.k; w.appendChild(lab);
       let el;
-      if (it.t === 'text') { el = document.createElement('input'); el.type = 'text'; el.maxLength = 12; el.placeholder = 'Naam'; }
-      else if (it.t === 'rng') { el = document.createElement('input'); el.type = 'range'; el.min = 0; el.max = 100; el.step = 1; }
-      else if (it.t === 'col') { el = document.createElement('input'); el.type = 'color'; }
-      else if (it.t === 'sel') {
-        el = document.createElement('select');
-        OPT[it.k].forEach(([v, n]) => { const o = document.createElement('option'); o.value = v; o.textContent = n; el.appendChild(o); });
+      if (it.t === 'text') { el = document.createElement('input'); el.type = 'text'; el.maxLength = 12; el.placeholder = 'Naam'; el.addEventListener('input', () => { draft[it.k] = el.value; }); }
+      else if (it.t === 'rng') { el = document.createElement('input'); el.type = 'range'; el.min = 0; el.max = 100; el.step = 1; el.addEventListener('input', () => { draft[it.k] = +el.value; }); }
+      else if (it.t === 'chips') {
+        el = document.createElement('div'); el.className = 'chips';
+        OPT[it.k].forEach(([v, n]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.v = v; b.textContent = n; b.onclick = () => { draft[it.k] = v; syncForm(); }; el.appendChild(b); });
       } else {
         el = document.createElement('div'); el.className = 'sw';
-        it.c.forEach(col => {
-          const b = document.createElement('button'); b.className = 'dot'; b.style.background = col; b.dataset.c = col; b.setAttribute('aria-label', col);
-          b.onclick = () => { draft[it.k] = col; syncForm(); };
-          el.appendChild(b);
-        });
+        it.c.forEach(col => { const b = document.createElement('button'); b.type = 'button'; b.className = 'dot'; b.style.background = col; b.dataset.c = col; b.setAttribute('aria-label', col); b.onclick = () => { draft[it.k] = col; syncForm(); }; el.appendChild(b); });
+        if (it.custom) { const ci = document.createElement('input'); ci.type = 'color'; ci.className = 'cust'; ci.title = 'Eigen kleur'; ci.addEventListener('input', () => { draft[it.k] = ci.value; syncForm(); }); el.appendChild(ci); }
       }
       el.id = 'f_' + it.k;
-      if (it.t !== 'sw') el.addEventListener('input', () => { draft[it.k] = it.t === 'rng' ? +el.value : el.value; syncForm(); });
+      if (it.t === 'text' || it.t === 'rng') el.addEventListener('input', syncForm);
       controls[it.k] = { el, it };
       w.appendChild(el);
       if (it.t === 'rng') { const rl = document.createElement('div'); rl.className = 'rl'; rl.innerHTML = `<span>${it.lo}</span><span>${it.hi}</span>`; w.appendChild(rl); }
-      fs.appendChild(w);
+      pane.appendChild(w);
     }
-    form.appendChild(fs);
   }
+  const dice = document.createElement('button'); dice.type = 'button'; dice.className = 'tab dice'; dice.textContent = '🎲 Willekeurig'; dice.onclick = randomize; bar.appendChild(dice);
+  form.appendChild(bar);
+  for (const sec of SCHEMA) form.appendChild(panes[sec.sec]);
+  showTab(activeTab);
+}
+function showTab(n) {
+  activeTab = n;
+  document.querySelectorAll('#form .tab[data-tab]').forEach(t => t.classList.toggle('sel', t.dataset.tab === n));
+  for (const [k, p] of Object.entries(panes)) p.hidden = k !== n;
 }
 function syncForm() {
   for (const [k, { el, it }] of Object.entries(controls)) {
-    if (it.t === 'sw') el.querySelectorAll('.dot').forEach(b => b.classList.toggle('sel', b.dataset.c === draft[k]));
-    else if (String(el.value) !== String(draft[k])) el.value = draft[k];
+    if (it.t === 'chips') el.querySelectorAll('.chip').forEach(b => b.classList.toggle('sel', b.dataset.v === String(draft[k])));
+    else if (it.t === 'sw') {
+      const cur = String(draft[k]).toLowerCase();
+      el.querySelectorAll('.dot').forEach(b => b.classList.toggle('sel', b.dataset.c.toLowerCase() === cur));
+      const ci = el.querySelector('.cust'); if (ci && /^#[0-9a-f]{6}$/i.test(cur)) ci.value = cur;
+    } else if (String(el.value) !== String(draft[k])) el.value = draft[k];
   }
-  // een jurk of rok past bij elkaar: houd de keuzes consistent
-  if (draft.top === 'dress' && controls.bottom.el.disabled !== true) controls.bottom.el.disabled = true;
-  if (draft.top !== 'dress' && controls.bottom.el.disabled) controls.bottom.el.disabled = false;
+  const dress = draft.top === 'dress'; // bij een jurk past geen aparte onderkant
+  controls.bottom.el.querySelectorAll('.chip').forEach(b => { b.disabled = dress; });
+}
+function randomize() {
+  const pick = a => a[Math.random() * a.length | 0], fem = draft.gender === 'f';
+  Object.assign(draft, {
+    height: pick(['short', 'normal', 'normal', 'tall']), build: pick(['slim', 'normal', 'normal', 'broad']), posture: pick(['upright', 'normal', 'normal', 'slouch']),
+    skin: pick(SKIN), eyes: pick(EYES), hair: pick(HAIR.slice(0, 9)),
+    style: pick(fem ? ['long', 'bob', 'ponytail', 'bun', 'braid', 'curly', 'short'] : ['short', 'buzz', 'quiff', 'curly', 'afro', 'bald', 'mohawk']),
+    beard: fem ? 'none' : pick(['none', 'none', 'stubble', 'moustache', 'beard']), glasses: pick(['none', 'none', 'none', 'round', 'square', 'sun']),
+    top: fem ? pick(['tshirt', 'long', 'hoodie', 'tank', 'dress', 'blazer']) : pick(['tshirt', 'long', 'hoodie', 'blazer', 'tank']), topColor: pick(TOPC),
+    bottom: fem ? pick(['jeans', 'chinos', 'shorts', 'skirt']) : pick(['jeans', 'jeans', 'chinos', 'shorts']), bottomColor: pick(BOTC), shoes: pick(SHOEC),
+    hat: pick(['none', 'none', 'none', 'cap', 'beanie']), hump: pick([0, 0, 0, 10, 25]), chest: 35 + (Math.random() * 30 | 0), belly: 30 + (Math.random() * 40 | 0), butt: 35 + (Math.random() * 30 | 0)
+  });
+  draft.face = ''; photoImg = null; syncForm();
 }
 function openEditor(f) {
   editingNew = !f;
@@ -173,7 +200,7 @@ function buildPhotoUI() {
       </div>
       <p class="hint">Het gezicht komt op je poppetje. De foto blijft alleen op dit apparaat staan.</p>
     </div>`;
-  $('form').appendChild(fs);
+  panes.Foto.appendChild(fs);
   $('photoIn').onchange = e => {
     const file = e.target.files && e.target.files[0]; if (!file) return;
     const rd = new FileReader();
@@ -212,6 +239,19 @@ const input = { duck: false }; let jumpHeld = false;
 const rnd = (a, b) => a + Math.random() * (b - a);
 // de beveiliger: een grote kerel in het zwart
 const BOUNCER = normalize({ id: -1, name: 'Beveiliger', gender: 'm', height: 'tall', build: 'broad', skin: SKIN[3], eyes: EYES[5], style: 'bald', hair: HAIR[0], beard: 'stubble', glasses: 'sun', top: 'blazer', topColor: '#15151c', bottom: 'chinos', bottomColor: '#15151c', shoes: '#0a0a0a', chest: 78, belly: 72, butt: 60, posture: 'upright' });
+const ANGRY_WOMAN = normalize({ id: -2, name: 'Boze vrouw', gender: 'f', height: 'normal', build: 'broad', skin: SKIN[1], eyes: EYES[5], style: 'curly', hair: HAIR[8], glasses: 'round', top: 'dress', topColor: '#8e44ad', shoes: '#5a3a2a', chest: 78, belly: 72, butt: 78 });
+const FAT_MAN = normalize({ id: -3, name: 'Dikke man', gender: 'm', height: 'normal', build: 'broad', skin: SKIN[1], eyes: EYES[3], style: 'short', hair: HAIR[8], beard: 'moustache', top: 'none', bottom: 'briefs', bottomColor: '#f2f2f2', shoes: SKIN[1], chest: 88, belly: 140, butt: 115, posture: 'slouch' });
+// wie er achter je aan rent: wisselt af
+const CHASERS = [
+  { char: BOUNCER, name: 'Beveiliger', line: 'Hé jij! Blijf staan!', mood: '', prop: '', scale: 1.04 },
+  { char: ANGRY_WOMAN, name: 'Boze vrouw', line: 'Ik krijg je wel, jij!', mood: 'angry', prop: 'pin', scale: 1.0 },
+  { char: FAT_MAN, name: 'Dikke man', line: 'Geef me mijn bier terug!', mood: 'angry', prop: '', scale: 1.06 }
+];
+let chaserIdx = -1;
+function newChaser() {
+  chaserIdx = (chaserIdx + 1 + (Math.random() < 0.5 ? 1 : 0)) % CHASERS.length;
+  return { def: CHASERS[chaserIdx], x: -90, ph: 0, age: 0, state: 'chase', fallT: 0, idle: false, need: 2 + (Math.random() * 4 | 0), survived: 0, handled: new Set(), act: null, trip: null, h: 0 };
+}
 
 function initRun(f) {
   mode = f.drink === 'wine' ? 2 : f.drink === 'cocktail' ? 3 : 1;
@@ -261,6 +301,7 @@ function spawn() {
   else if (r < 0.62) { const k = 1 + (Math.random() * 3 | 0); o = { type: 'bollard', x, w: 16 + (k - 1) * 30, k, h: 56, y: GROUND - 56 }; } // verkeerspaaltjes
   else if (r < 0.76) o = { type: 'lamp', x, w: 46, h: 38, y: GROUND - 104 }; // hanglamp: bukken!
   else o = { type: 'table', x, w: [160, 210, 270][Math.random() * 3 | 0], h: 55, y: GROUND - 55 }; // lange tafel: springen, erop landen mag
+  o.theme = bonus ? bonusKind : (zone ? 'disco' : 'cafe'); // elke omgeving heeft eigen tafels, lampen, kratten...
   obstacles.push(o);
   const n = 3 + (Math.random() * 3 | 0);
   if (o.type === 'lamp') {
@@ -359,11 +400,23 @@ function updateBouncer(dt) {
   if (state === 'play') {
     b.ph += dt * speed * 0.052;
     if (b.x < targetX) b.x = Math.min(targetX, b.x + 320 * dt);
-    if (!b.target) { let t = null; for (const o of obstacles) if (o.x > player.x + 40 && (!t || o.x < t.x)) t = o; b.target = t; }
-    else if (b.target.x < b.x + 24 && b.target.x + b.target.w > b.x - 20) { // struikelt over het eerstvolgende obstakel
-      b.state = 'fall'; b.fallT = 0; score += 25; shake = 0.15; pop('Beveiliger uitgeschakeld! +25 m', 90, 150, '#ffd43b');
+    if (b.act) { // bezig met springen of bukken
+      b.act.t += dt; const u = Math.min(1, b.act.t / b.act.T);
+      b.h = b.act.type === 'hop' ? b.act.H * 4 * u * (1 - u) : 0;
+      if (b.act.t >= b.act.T) { b.act = null; b.h = 0; }
+    } else for (const o of obstacles) { // volgend obstakel: een paar keer ontwijken, daarna struikelen
+      if (b.handled.has(o) || o.x > b.x + 150 || o.x + o.w < b.x - 20) continue;
+      b.handled.add(o);
+      if (b.survived >= b.need) { b.trip = o; break; }
+      b.survived++;
+      b.act = o.type === 'lamp' ? { type: 'duck', t: 0, T: (o.w + 90) / speed } : { type: 'hop', t: 0, T: (o.w + 100) / speed, H: o.h + 48 };
+      break;
+    }
+    if (b.trip && !b.act && b.trip.x < b.x + 24 && b.trip.x + b.trip.w > b.x - 20) {
+      b.state = 'fall'; b.fallT = 0; b.h = 0; score += 25; shake = 0.15; pop(`${b.def.name} gestruikeld! +25 m`, 90, 150, '#ffd43b');
     }
   } else { // jij bent gevallen: hij rent naar je toe en blijft staan
+    b.h = 0; b.act = null;
     if (b.x < targetX + 30) { b.x = Math.min(targetX + 30, b.x + 260 * dt); b.ph += dt * 14; b.idle = false; } else b.idle = true;
   }
 }
@@ -406,7 +459,7 @@ function update(dt) {
   const nz = bonus ? 0 : Math.floor(score / 150) % 2; // elke 150 m wisselt het café tussen bar en dansvloer
   if (nz !== zone) { zone = nz; pop(zone ? 'Dansvloer!' : 'Terug in het café', W / 2 - 50, 130, '#ff9de2'); }
   bouncerIn -= dt;
-  if (!bouncer && !bonus && bouncerIn <= 0 && score < FINISH - 150) { bouncer = { x: -90, ph: 0, age: 0, state: 'chase', fallT: 0, target: null, idle: false }; bouncerIn = rnd(26, 40); }
+  if (!bouncer && !bonus && bouncerIn <= 0 && score < FINISH - 150) { bouncer = newChaser(); bouncerIn = rnd(24, 36); }
   updateBouncer(dt);
   if (score < FINISH - 15) { spawnIn -= dt; if (spawnIn <= 0) spawn(); } // vlak voor de finish komen er geen obstakels meer
   if (!finishObj && score >= FINISH - 10) finishObj = { x: W + 40 };
@@ -518,9 +571,137 @@ function drawItem(c, bob = 0) {
   else if (mode === 3) drawCocktail(c.x - 12, c.y + bob - 20, 24, 40, 0.55);
   else drawWine(c.x - 11, c.y + bob - 19, 22, 38, 0.42);
 }
+// Per omgeving een eigen uiterlijk (dezelfde afmetingen en botsingen, andere look)
+const THEMED = {
+  barrel(o, th) { // 50 x 46
+    const w = o.w, h = o.h;
+    if (th === 'cocktail') { // zilveren cocktailshaker
+      const g = ctx.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#8b94a1'); g.addColorStop(0.35, '#f4f7fa'); g.addColorStop(1, '#79828f');
+      ctx.fillStyle = g; ctx.strokeStyle = '#4a525c'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(5, 16); ctx.lineTo(w - 5, 16); ctx.lineTo(w - 10, h); ctx.lineTo(10, h); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(11, 3, w - 22, 14, 3); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.roundRect(w / 2 - 6, -3, 12, 7, 3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(12, 20, 3, h - 28); ctx.fillStyle = 'rgba(180,230,255,.6)'; for (const [dx, dy] of [[30, 26], [24, 34], [34, 38]]) { ctx.beginPath(); ctx.arc(dx, dy, 1.6, 0, 7); ctx.fill(); }
+    } else if (th === 'beer') { // roestvrijstalen fust
+      const g = ctx.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#7b858c'); g.addColorStop(0.4, '#eef3f6'); g.addColorStop(1, '#6a747b');
+      ctx.fillStyle = g; ctx.strokeStyle = '#3f474d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(2, 4, w - 4, h - 4, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#4a545b'; ctx.fillRect(0, 12, w, 4); ctx.fillRect(0, h - 14, w, 4); ctx.beginPath(); ctx.roundRect(8, 0, w - 16, 7, 3); ctx.fill();
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(w / 2 - 9, 22, 18, 10); ctx.fillStyle = '#fff'; ctx.font = '800 8px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('BIER', w / 2, 30); ctx.textAlign = 'left';
+    } else if (th === 'wine') { // donker eiken wijnvat met gelekte wijn
+      const g = ctx.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#2e170a'); g.addColorStop(0.4, '#6b3a18'); g.addColorStop(1, '#251207');
+      ctx.fillStyle = g; ctx.strokeStyle = '#150a03'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(5, 0); ctx.quadraticCurveTo(-5, h / 2, 5, h); ctx.lineTo(w - 5, h); ctx.quadraticCurveTo(w + 5, h / 2, w - 5, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      for (const yy of [8, h - 14]) { ctx.fillStyle = '#b8892a'; ctx.fillRect(-1, yy, w + 2, 4); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(-1, yy, w + 2, 1); }
+      ctx.fillStyle = 'rgba(150,20,60,.85)'; ctx.fillRect(w * 0.6, 10, 3, 22); ctx.beginPath(); ctx.arc(w * 0.6 + 1.5, 32, 2.5, 0, 7); ctx.fill();
+    } else { // disco: zwart met neonhoepels
+      ctx.fillStyle = '#17102a'; ctx.strokeStyle = '#0a0614'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(5, 0); ctx.quadraticCurveTo(-5, h / 2, 5, h); ctx.lineTo(w - 5, h); ctx.quadraticCurveTo(w + 5, h / 2, w - 5, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.save(); ctx.shadowBlur = 12; for (const [yy, col] of [[8, '#ff3d81'], [h - 14, '#00e5ff']]) { ctx.shadowColor = col; ctx.fillStyle = col; ctx.fillRect(-1, yy, w + 2, 3); } ctx.restore();
+    }
+  },
+  crates(o, th) { // 44 x 78, twee op elkaar
+    for (let i = 0; i < 2; i++) {
+      const yy = i * 39, w = o.w;
+      if (th === 'disco') { // speakerkasten
+        ctx.fillStyle = '#16121f'; ctx.strokeStyle = '#05030a'; ctx.lineWidth = 2; ctx.fillRect(0, yy, w, 39); ctx.strokeRect(0, yy, w, 39);
+        for (const [cx, cy, r] of [[w / 2, yy + 13, 8], [w / 2, yy + 29, 5]]) { ctx.fillStyle = '#0a0812'; ctx.beginPath(); ctx.arc(cx, cy, r + 2, 0, 7); ctx.fill(); ctx.fillStyle = '#3a3550'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill(); ctx.fillStyle = '#6a6488'; ctx.beginPath(); ctx.arc(cx, cy, r * 0.4, 0, 7); ctx.fill(); }
+        ctx.fillStyle = '#c0c4cc'; for (const [nx, ny] of [[2, 2], [w - 4, 2], [2, 35], [w - 4, 35]]) ctx.fillRect(nx, yy + ny, 2.5, 2.5);
+        ctx.save(); ctx.shadowColor = '#ff3d81'; ctx.shadowBlur = 8; ctx.fillStyle = '#ff3d81'; ctx.fillRect(w - 8, yy + 4, 4, 2); ctx.restore();
+      } else if (th === 'wine') { // wijnkisten met stro en flessenhalzen
+        const g = ctx.createLinearGradient(0, yy, w, yy + 39); g.addColorStop(0, '#c9a36a'); g.addColorStop(1, '#9a7442');
+        ctx.fillStyle = g; ctx.strokeStyle = '#3b2412'; ctx.lineWidth = 2; ctx.fillRect(0, yy, w, 39); ctx.strokeRect(0, yy, w, 39);
+        ctx.strokeStyle = 'rgba(60,35,15,.55)'; ctx.lineWidth = 1; for (const ly of [10, 20, 30]) { ctx.beginPath(); ctx.moveTo(1, yy + ly); ctx.lineTo(w - 1, yy + ly); ctx.stroke(); }
+        ctx.fillStyle = '#7a1230'; ctx.font = '800 9px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('VIN', w / 2, yy + 24); ctx.textAlign = 'left';
+        if (i === 0) { ctx.fillStyle = '#e0c060'; for (let k = 0; k < 6; k++) ctx.fillRect(3 + k * 6.5, yy - 2, 2, 5); ctx.fillStyle = '#14301c'; for (const bx of [10, 22, 34]) { ctx.beginPath(); ctx.arc(bx, yy + 3, 3, 0, 7); ctx.fill(); } }
+      } else if (th === 'beer') { // gele bierkratten met doppen
+        ctx.fillStyle = '#e0a800'; ctx.strokeStyle = '#6b4f00'; ctx.lineWidth = 2; ctx.fillRect(0, yy, w, 39); ctx.strokeRect(0, yy, w, 39);
+        ctx.fillStyle = '#7a5a00'; ctx.fillRect(w / 2 - 9, yy + 4, 18, 5); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(2, yy + 2, w - 4, 2);
+        for (let r = 0; r < 2; r++) for (let k = 0; k < 4; k++) { ctx.fillStyle = '#1e5a2c'; ctx.beginPath(); ctx.arc(7 + k * 10.2, yy + 18 + r * 10, 4, 0, 7); ctx.fill(); ctx.fillStyle = '#d4a017'; ctx.beginPath(); ctx.arc(7 + k * 10.2, yy + 18 + r * 10, 2.2, 0, 7); ctx.fill(); }
+      } else { // cocktail: ijsbox
+        const g = ctx.createLinearGradient(0, yy, 0, yy + 39); g.addColorStop(0, '#ff9ec8'); g.addColorStop(1, '#e0558f');
+        ctx.fillStyle = g; ctx.strokeStyle = '#8a1f4f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(0, yy, w, 39, 5); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.fillRect(2, yy + 2, w - 4, 8); ctx.fillStyle = '#e0558f'; ctx.font = '800 9px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ICE', w / 2, yy + 25); ctx.textAlign = 'left';
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(4, yy + 30, 8, 4); ctx.fillRect(w - 14, yy + 28, 9, 5);
+      }
+    }
+  },
+  shards(o, th) { // 66 x 30
+    const pud = { disco: ['rgba(255,60,170,.75)', 'rgba(0,229,255,.2)'], wine: ['rgba(120,15,50,.85)', 'rgba(120,15,50,.2)'], beer: ['rgba(245,245,225,.9)', 'rgba(220,160,40,.3)'], cocktail: ['rgba(255,107,157,.85)', 'rgba(255,180,70,.2)'] }[th];
+    const g = ctx.createRadialGradient(33, o.h - 3, 2, 33, o.h - 3, 36); g.addColorStop(0, pud[0]); g.addColorStop(1, pud[1]);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(33, o.h - 3, 36, 6, 0, 0, 7); ctx.fill();
+    const sh = [[2, 14, 8], [14, 26, 12], [30, 18, 9], [44, 24, 11], [54, 12, 7]];
+    sh.forEach(([sx, sh_, sw], i) => {
+      ctx.fillStyle = th === 'disco' ? `hsla(${i * 70 + 280},95%,65%,.9)` : th === 'wine' ? 'rgba(30,60,35,.92)' : th === 'beer' ? 'rgba(150,85,25,.9)' : 'rgba(215,240,250,.85)';
+      ctx.strokeStyle = th === 'wine' ? '#0a1c0e' : th === 'beer' ? '#5a3010' : 'rgba(40,70,90,.9)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(sx, o.h - 2); ctx.lineTo(sx + sw * 0.45, o.h - sh_); ctx.lineTo(sx + sw, o.h - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(sx + sw * 0.4, o.h - sh_ + 4); ctx.lineTo(sx + sw * 0.3, o.h - 6); ctx.stroke();
+    });
+    if (th === 'cocktail') { ctx.fillStyle = '#7ed321'; ctx.beginPath(); ctx.arc(58, o.h - 6, 6, Math.PI, 0); ctx.fill(); }
+  },
+  bollard(o, th) {
+    const pal = { disco: ['#ff3d81', '#fff'], wine: ['#1f4d2e', '#c9a227'], beer: ['#f2c200', '#1a1a1a'], cocktail: ['#ff7ab5', '#ffffff'] }[th];
+    for (let i = 0; i < o.k; i++) {
+      const bx = i * 30;
+      ctx.save(); if (th === 'disco' || th === 'cocktail') { ctx.shadowColor = pal[0]; ctx.shadowBlur = 12; }
+      ctx.fillStyle = pal[1]; ctx.strokeStyle = '#222'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(bx, 0, 16, o.h, [8, 8, 2, 2]); ctx.fill(); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.roundRect(bx, 0, 16, o.h, [8, 8, 2, 2]); ctx.clip();
+      ctx.fillStyle = pal[0]; ctx.fillRect(bx, 8, 16, 9); ctx.fillRect(bx, 26, 16, 9); ctx.fillRect(bx, 44, 16, 12); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(bx + 3, 0, 2.5, o.h); ctx.restore();
+    }
+  },
+  table(o, th) { // top op y = 0, 10 hoog; tot de grond 55
+    const w = o.w, h = o.h;
+    if (th === 'cocktail') { // hoge glazen bartafel met chromen poten en neon
+      ctx.fillStyle = '#c9d2dc'; ctx.fillRect(10, 12, 6, h - 12); ctx.fillRect(w - 16, 12, 6, h - 12); ctx.fillStyle = '#eef3f8'; ctx.fillRect(10, 12, 2, h - 12); ctx.fillRect(w - 16, 12, 2, h - 12);
+      ctx.fillStyle = 'rgba(160,230,255,.55)'; ctx.strokeStyle = 'rgba(230,250,255,.95)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-2, 0, w + 4, 10, 4); ctx.fill(); ctx.stroke();
+      ctx.save(); ctx.shadowColor = '#ff3d81'; ctx.shadowBlur = 12; ctx.fillStyle = '#ff7ab5'; ctx.fillRect(0, 9, w, 2.5); ctx.restore();
+    } else if (th === 'disco') { // zwart glanzend met ledrand
+      ctx.fillStyle = '#26203a'; ctx.fillRect(w / 2 - 5, 12, 10, h - 12); ctx.fillStyle = '#17102a'; ctx.fillRect(10, 12, 7, h - 12); ctx.fillRect(w - 17, 12, 7, h - 12);
+      const g = ctx.createLinearGradient(0, 0, 0, 10); g.addColorStop(0, '#3a3158'); g.addColorStop(1, '#120c24'); ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(-2, 0, w + 4, 10, 3); ctx.fill();
+      ctx.save(); ctx.shadowBlur = 12; for (let i = 0; i < 6; i++) { const col = `hsl(${i * 60 + time * 80},95%,60%)`; ctx.shadowColor = col; ctx.fillStyle = col; ctx.fillRect(-2 + i * ((w + 4) / 6), 8, (w + 4) / 6 + 0.5, 3); } ctx.restore();
+    } else if (th === 'wine') { // plank op twee wijnvaatjes met kaarsen
+      const bg = ctx.createLinearGradient(0, 0, 28, 0); bg.addColorStop(0, '#2e170a'); bg.addColorStop(0.5, '#6b3a18'); bg.addColorStop(1, '#251207');
+      for (const bx of [8, w - 36]) { ctx.fillStyle = bg; ctx.strokeStyle = '#150a03'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(bx, 10, 28, h - 10, 6); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#b8892a'; ctx.fillRect(bx, 18, 28, 3); ctx.fillRect(bx, h - 14, 28, 3); }
+      const tg = ctx.createLinearGradient(0, 0, 0, 10); tg.addColorStop(0, '#7a5230'); tg.addColorStop(1, '#4a2e14'); ctx.fillStyle = tg; ctx.strokeStyle = '#1e1005'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-2, 0, w + 4, 10, 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(130,20,55,.55)'; ctx.fillRect(w * 0.3, 1, 18, 3);
+      for (const cx of [w * 0.2, w * 0.75]) { ctx.fillStyle = '#f1e6c8'; ctx.fillRect(cx - 2, -10, 4, 10); const fl = 0.7 + 0.3 * Math.sin(time * 14 + cx); ctx.fillStyle = `rgba(255,190,70,${fl})`; ctx.beginPath(); ctx.ellipse(cx, -14, 2, 4, 0, 0, 7); ctx.fill(); }
+    } else { // beer: stalen werktafel
+      ctx.fillStyle = '#7b858c'; ctx.fillRect(10, 12, 6, h - 12); ctx.fillRect(w - 16, 12, 6, h - 12); ctx.fillRect(10, h - 16, w - 20, 3);
+      const g = ctx.createLinearGradient(0, 0, 0, 10); g.addColorStop(0, '#f3f7fa'); g.addColorStop(1, '#8d979d'); ctx.fillStyle = g; ctx.strokeStyle = '#4a545b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-2, 0, w + 4, 10, 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(4, 2, w * 0.4, 2);
+      ctx.fillStyle = '#e0a800'; ctx.fillRect(w * 0.15, 26, 30, 22); ctx.fillStyle = '#7a5a00'; ctx.fillRect(w * 0.15 + 10, 29, 10, 4); // bierkrat onder de tafel
+    }
+  },
+  lamp(o, th) { // opgehangen op hoofdhoogte: x gecentreerd, 46 breed, 38 hoog
+    const sway = Math.sin(time * 3 + o.x * 0.01) * 0.04;
+    ctx.translate(o.w / 2, 0); ctx.rotate(sway);
+    ctx.strokeStyle = '#1e1208'; ctx.lineWidth = 2;
+    if (th === 'cocktail') { // neonbuis
+      const pu = 0.75 + 0.25 * Math.sin(time * 9 + o.x);
+      ctx.beginPath(); ctx.moveTo(-18, -o.y); ctx.lineTo(-18, 22); ctx.moveTo(18, -o.y); ctx.lineTo(18, 22); ctx.stroke();
+      ctx.save(); ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 20 * pu; ctx.strokeStyle = `rgba(150,250,255,${pu})`; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-20, 26); ctx.lineTo(20, 26); ctx.stroke();
+      ctx.shadowColor = '#ff3d81'; ctx.strokeStyle = `rgba(255,150,200,${pu})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-20, 36); ctx.lineTo(20, 36); ctx.stroke(); ctx.restore();
+    } else if (th === 'disco') { // spiegelbol
+      ctx.beginPath(); ctx.moveTo(0, -o.y); ctx.lineTo(0, 6); ctx.stroke();
+      const gl = ctx.createRadialGradient(0, 22, 4, 0, 22, 60); gl.addColorStop(0, `hsla(${(time * 90) % 360},95%,65%,.5)`); gl.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gl; ctx.fillRect(-60, -30, 120, 110);
+      const gb = ctx.createRadialGradient(-5, 15, 2, 0, 22, 18); gb.addColorStop(0, '#fff'); gb.addColorStop(1, '#6f7590'); ctx.fillStyle = gb; ctx.beginPath(); ctx.arc(0, 22, 17, 0, 7); ctx.fill();
+      for (let i = 0; i < 10; i++) { const an = i * 0.95 + time * 3; ctx.fillStyle = `hsl(${(i * 40 + time * 90) % 360},90%,78%)`; ctx.fillRect(Math.cos(an) * 11 - 1.5, 22 + Math.sin(an * 1.3) * 11 - 1.5, 3, 3); }
+    } else if (th === 'wine') { // ijzeren lantaarn met kaars
+      const fl = 0.8 + 0.2 * Math.sin(time * 13 + o.x);
+      ctx.beginPath(); ctx.moveTo(0, -o.y); ctx.lineTo(0, 4); ctx.stroke();
+      const gl = ctx.createRadialGradient(0, 22, 3, 0, 22, 55 * fl); gl.addColorStop(0, 'rgba(255,170,60,.6)'); gl.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = gl; ctx.fillRect(-60, -30, 120, 110);
+      ctx.fillStyle = '#1a1a1a'; ctx.fillRect(-12, 4, 24, 4); ctx.fillRect(-12, 36, 24, 3); ctx.fillStyle = `rgba(255,200,90,${0.55 + 0.3 * fl})`; ctx.fillRect(-10, 8, 20, 28);
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 2; ctx.strokeRect(-10, 8, 20, 28); ctx.beginPath(); ctx.moveTo(0, 8); ctx.lineTo(0, 36); ctx.stroke();
+      ctx.fillStyle = '#f1e6c8'; ctx.fillRect(-2, 22, 4, 14); ctx.fillStyle = '#ffd25e'; ctx.beginPath(); ctx.ellipse(0, 18, 2.4, 5, 0, 0, 7); ctx.fill();
+    } else { // beer: industriële kooilamp
+      ctx.beginPath(); ctx.moveTo(0, -o.y); ctx.lineTo(0, 4); ctx.stroke();
+      const gl = ctx.createRadialGradient(0, 28, 4, 0, 28, 60); gl.addColorStop(0, 'rgba(255,240,190,.55)'); gl.addColorStop(1, 'rgba(255,240,190,0)'); ctx.fillStyle = gl; ctx.fillRect(-60, -20, 120, 110);
+      const g = ctx.createLinearGradient(-20, 0, 20, 0); g.addColorStop(0, '#5f696f'); g.addColorStop(0.45, '#d6dde2'); g.addColorStop(1, '#4a545b');
+      ctx.fillStyle = g; ctx.strokeStyle = '#2a3238'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-6, 4); ctx.lineTo(6, 4); ctx.lineTo(21, 24); ctx.lineTo(-21, 24); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff6c8'; ctx.beginPath(); ctx.arc(0, 28, 7, 0, 7); ctx.fill(); ctx.strokeStyle = '#2a3238'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.roundRect(-11, 22, 22, 15, 4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-4, 22); ctx.lineTo(-4, 37); ctx.moveTo(4, 22); ctx.lineTo(4, 37); ctx.stroke();
+    }
+  }
+};
 function drawObstacle(o) {
   ctx.save(); ctx.translate(o.x, o.y);
   if (o.type !== 'lamp') { ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(o.w / 2, o.h, o.w * 0.6, 5, 0, 0, 7); ctx.fill(); }
+  if (o.theme && o.theme !== 'cafe' && THEMED[o.type]) { THEMED[o.type](o, o.theme); ctx.restore(); return; }
   if (o.type === 'barrel') {
     const g = ctx.createLinearGradient(0, 0, o.w, 0); g.addColorStop(0, '#6e3d16'); g.addColorStop(0.4, '#b0702f'); g.addColorStop(1, '#5a3010');
     ctx.fillStyle = g; ctx.strokeStyle = '#2e1b0c'; ctx.lineWidth = 2.5;
@@ -905,13 +1086,16 @@ function drawDisco(a) { // dansvloer: gekleurde spots, discobal en lichtgevende 
   ctx.globalAlpha = 1;
 }
 function drawBouncer() {
-  const b = bouncer, fall = b.state === 'fall';
-  drawChar(ctx, BOUNCER, b.x, GROUND, { pose: fall ? 'faint' : (b.idle ? 'idle' : 'run'), t: b.ph, scale: 1.04, faint: fall ? Math.min(1, b.fallT / 0.4) : 0, fwd: true });
+  const b = bouncer, d = b.def, fall = b.state === 'fall';
+  let pose = fall ? 'faint' : (b.idle ? 'idle' : 'run');
+  if (b.act && b.act.type === 'hop') pose = 'jump'; else if (b.act && b.act.type === 'duck') pose = 'duck';
+  drawChar(ctx, d.char, b.x, GROUND - b.h, { pose, t: b.ph, scale: d.scale, faint: fall ? Math.min(1, b.fallT / 0.4) : 0, fwd: true, mood: d.mood, prop: d.prop, airH: b.h });
   if (!fall && b.age < 2.8 && b.x > 0) {
+    ctx.font = '800 14px Nunito, system-ui, sans-serif'; const tw = ctx.measureText(d.line).width + 18;
     const tx = Math.max(b.x + 10, 100), ty = GROUND - 150;
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(tx - 6, ty - 22, 142, 28, 10); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(tx - 6, ty - 22, tw, 28, 10); ctx.fill();
     ctx.beginPath(); ctx.moveTo(tx + 6, ty + 5); ctx.lineTo(tx + 14, ty + 15); ctx.lineTo(tx + 22, ty + 5); ctx.fill();
-    ctx.fillStyle = '#111'; ctx.font = '800 14px Nunito, system-ui, sans-serif'; ctx.textBaseline = 'middle'; ctx.fillText('Hé jij! Blijf staan!', tx, ty - 8);
+    ctx.fillStyle = '#111'; ctx.textBaseline = 'middle'; ctx.fillText(d.line, tx + 3, ty - 8);
   }
   if (fall && b.fallT > 0.35) drawStars(b.x + 70, GROUND - 6, b.fallT);
 }

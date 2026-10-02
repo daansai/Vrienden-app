@@ -7,8 +7,11 @@ Een renspel door een bruin café, in de stijl van Kaasje / de Chrome dino-game. 
 - **Glas leeg = gewonnen.** Raak je een obstakel, dan val je flauw en moet je opdrinken wat er nog in je glas zit.
 - **Meerdere spelers:** maak voor iedereen een eigen poppetje, tik op wie er meedoen en speel om de beurt. Na de laatste speler zie je wie het meest moet drinken.
 - **Open vat:** af en toe staat er een open wijnvat (wijndrinkers) of biervat (bierdrinkers). Cocktaildrinkers krijgen een reuzecocktail. Spring er van boven in en je komt 250 meter lang in een wijnkelder, brouwerij of cocktailbar. Bukken in de lucht laat je meteen naar beneden gaan. Tegen de zijkant aan lopen is gevaarlijk.
-- **Omgeving:** lange tafels waar je op kunt springen (met flesjes erop), verkeerspaaltjes om overheen te springen, een beveiliger die achter je aan rent tot hij over het volgende obstakel struikelt, en elke 150 m een dansvloer met discobal.
-- **Poppetjes-maker:** man/vrouw, lengte, postuur, houding, bochel, borst, buik, billen, huid, ogen, kapsel, baard, bril, kleding, schoenen, hoofddeksel en een foto van je eigen gezicht (blijft alleen op je apparaat).
+- **Per omgeving andere obstakels:** de tafels, lampen, kratten, vaten, scherven en paaltjes zien er in elke omgeving anders uit (café, dansvloer, wijnkelder, brouwerij, cocktailbar).
+- **Achtervolgers:** een beveiliger, een boze vrouw met een deegroller en een heel dikke man in zijn onderbroek rennen om de beurt achter je aan. Ze ontwijken eerst 2 tot 5 obstakels voordat ze struikelen.
+- **Omgeving:** lange tafels waar je op kunt springen (met flesjes erop), verkeerspaaltjes om overheen te springen,  elke 150 m een dansvloer met discobal.
+- **Poppetjes-maker:** tabs met grote keuzeknoppen, kleurstaaltjes met eigen kleur en een 🎲-knop voor een willekeurig poppetje. Echte stoffen: denim met stiksels en omgeslagen pijpen, jersey, tricot, fleece, wol en katoen.
+- **Eerder:** man/vrouw, lengte, postuur, houding, bochel, borst, buik, billen, huid, ogen, kapsel, baard, bril, kleding, schoenen, hoofddeksel en een foto van je eigen gezicht (blijft alleen op je apparaat).
 
 Open `index.html` in een browser (of serveer de map, bijv. `python3 -m http.server`).
 

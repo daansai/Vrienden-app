@@ -77,3 +77,23 @@ input[type=range]{width:100%;accent-color:#ffc933}
 .photoctl{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 #photoPrev{border-radius:50%;border:2px solid #f5a300;background:rgba(255,255,255,.08)}
 .photosl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;font-size:13px;flex:1 1 200px}
+/* --- makkelijkere poppetjes-maker --- */
+[hidden]{display:none!important}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:#3a2a2e;border-radius:999px;padding:7px 14px;font-size:14px;font-weight:700}
+.tab.sel{background:linear-gradient(#e0a02a,#b87a14);color:#2a1608}
+.tab.dice{background:linear-gradient(#6fd44a,#48a82a);margin-left:auto}
+.pane{display:flex;flex-direction:column;gap:14px;background:rgba(0,0,0,.18);border:1px solid #6b4a3a;border-radius:12px;padding:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:#3a2a2e;border:2px solid transparent;border-radius:999px;padding:6px 12px;font-size:13px}
+.chip.sel{border-color:#ffc933;background:#5a3a1a}
+.chip:disabled{opacity:.35;cursor:not-allowed}
+.sw .cust{width:30px;height:30px;padding:0;border:2px solid rgba(255,255,255,.35);border-radius:50%;background:none}
+.pv{position:sticky;top:0;align-self:flex-start}
+@media (max-width:760px){
+  .edwrap{gap:8px}
+  .pv{width:100%;z-index:3;background:linear-gradient(#26140c,rgba(38,20,12,.9));padding-bottom:6px}
+  #preview{height:32vh;width:auto}
+  #poseBtns button{padding:5px 9px;font-size:13px}
+}
+.fld .sw .cust{width:30px;height:30px;padding:0;border:2px solid rgba(255,255,255,.35);border-radius:50%;background:none}
