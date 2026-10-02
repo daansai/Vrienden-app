@@ -22,8 +22,8 @@ let best = store.get(bestKey(), 0);
 
 // drain = hoeveel van het glas er per flesje/wijnglas uitgaat, refill = hoeveel een shotje bijvult
 const MODES = {
-  1: { name: 'Bierflesjes', base: 330, grow: 9, max: 780, drain: 0.035, refill: 0.08 },
-  2: { name: 'Wijnglazen', base: 330, grow: 9, max: 780, drain: 0.075, refill: 0.09 } // zelfde tempo als bier; wijn is sterker, dus het glas gaat sneller leeg
+  1: { name: 'Bierflesjes', base: 330, grow: 9, max: 780, drain: 0.02, refill: 0.08 },
+  2: { name: 'Wijnglazen', base: 330, grow: 9, max: 780, drain: 0.045, refill: 0.09 } // zelfde tempo als bier; wijn is sterker, dus het glas gaat sneller leeg
 };
 
 /* ---------- menu & spelers ---------- */
@@ -207,7 +207,7 @@ $('btnHome').onclick = () => goHome();
 let state = 'menu', player, obstacles = [], items = [], speed = 330, score = 0, itemCount = 0, spawnIn = 1, time = 0, phase = 0, faintT = 0, wonT = 0, lastT;
 let dust = [], motes = Array.from({ length: 34 }, (_, i) => ({ x: (i * 97) % 800, y: 30 + (i * 53) % 280, r: 0.8 + (i % 3) * 0.5, v: 4 + i % 5, p: i })), shake = 0, wasAir = false, dustT = 0, nextMile = 100;
 let level = 1, dispLevel = 1, pulse = 0, popups = [], confetti = [], overShown = false, hintT = 0;
-let shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
+let drunk = 0, shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
 const input = { duck: false }; let jumpHeld = false;
 const rnd = (a, b) => a + Math.random() * (b - a);
 // de beveiliger: een grote kerel in het zwart
@@ -219,7 +219,7 @@ function initRun(f) {
   obstacles = []; items = []; popups = []; confetti = []; dust = [];
   speed = MODES[mode].base; score = 0; itemCount = 0; spawnIn = 1; time = 0; phase = 0; faintT = 0; wonT = 0;
   level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; shake = 0; wasAir = false; nextMile = 100;
-  shotCount = 0; bouncer = null; bouncerIn = rnd(18, 28); zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
+  drunk = 0; shotCount = 0; bouncer = null; bouncerIn = rnd(18, 28); zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
 }
 function setOver(o) {
   $('overTitle').textContent = o.title; $('overScore').textContent = o.text || ''; $('overDrink').textContent = o.drink || '';
@@ -278,6 +278,7 @@ function spawn() {
 function collect(c) {
   const M = MODES[mode];
   if (c.type === 'shot') {
+    drunk = Math.min(8, drunk + 4.5); pop('Hik!', player.x - 10, player.y - 120, '#ffb3e6'); // een shotje maakt je wazig en wankelig
     shotCount++;
     if (shotCount % 3 === 0) { // easteregg: elk derde shotje vult het hele glas
       level = 1; pulse = 1.4; pop('JACKPOT! Glas weer helemaal vol!', 110, 100, '#ffd43b');
@@ -353,7 +354,7 @@ function updateBouncer(dt) {
 function update(dt) {
   const M = MODES[mode];
   if (state === 'menu') return;
-  dispLevel += (level - dispLevel) * Math.min(1, dt * 7); pulse = Math.max(0, pulse - dt); shake = Math.max(0, shake - dt);
+  dispLevel += (level - dispLevel) * Math.min(1, dt * 7); pulse = Math.max(0, pulse - dt); shake = Math.max(0, shake - dt); drunk = Math.max(0, drunk - dt);
   zoneBlend += (zone - zoneBlend) * Math.min(1, dt * 1.5);
   for (const d of dust) { d.t += dt; d.x += d.vx * dt - (state === 'play' ? speed * dt : 0); d.y += d.vy * dt; }
   dust = dust.filter(d => d.t < 0.6);
@@ -724,7 +725,10 @@ function renderScene(ts) {
   else if (player.duck && player.on) pose = 'duck';
   for (const d of dust) { ctx.fillStyle = `rgba(214,186,150,${0.55 * (1 - d.t / 0.6)})`; ctx.beginPath(); ctx.arc(d.x, d.y, d.r * (1 + d.t * 2), 0, 7); ctx.fill(); }
   if (bouncer) drawBouncer();
+  const dI = Math.min(1, drunk / 2);
+  ctx.save(); if (dI > 0 && !fa) { ctx.translate(player.x, py); ctx.rotate(Math.sin(performance.now() / 260) * 0.13 * dI); ctx.translate(-player.x + Math.sin(performance.now() / 410) * 7 * dI, -py); }
   drawChar(ctx, player.f, player.x, py, { pose, t: phase, scale: 1.0, faint: fa, airH: GROUND - py, fwd: false });
+  ctx.restore();
   if (fa) { const th = fa * Math.PI / 2; drawStars(player.x - 70 * Math.sin(th), player.y - 70 * Math.cos(th) - 9 * fa, faintT); }
   vignette();
   drawHUD();
@@ -743,6 +747,13 @@ function render(ts) {
   ctx.save();
   if (shake > 0) ctx.translate(rnd(-5, 5) * shake / 0.3, rnd(-5, 5) * shake / 0.3);
   renderScene(ts); ctx.restore();
+  // dronken: dubbel beeld, wazig en een zwaaiend scherm
+  const dI = state === 'menu' ? 0 : Math.min(1, drunk / 2), t = performance.now() / 1000;
+  if (dI > 0) {
+    ctx.save(); ctx.globalAlpha = 0.32 * dI; ctx.drawImage(cv, Math.sin(t * 2.1) * 9 * dI, Math.cos(t * 1.7) * 3 * dI); ctx.restore();
+    cv.style.filter = `blur(${(1.6 * dI).toFixed(2)}px) saturate(${1 + 0.4 * dI})`;
+    cv.style.transform = `rotate(${(Math.sin(t * 1.6) * 1.4 * dI).toFixed(2)}deg) scale(${1 + 0.02 * dI})`;
+  } else if (cv.style.filter) { cv.style.filter = ''; cv.style.transform = ''; }
 }
 function loop(ts) {
   const dt = Math.min(0.05, ((ts - (lastT || ts)) / 1000)); lastT = ts;
