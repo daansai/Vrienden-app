@@ -6,6 +6,7 @@ Een renspel door een bruin café, in de stijl van Kaasje / de Chrome dino-game. 
 - **Shotjes** die voorbij komen vullen je glas weer een beetje bij. Easteregg: elk derde shotje vult het hele glas.
 - **Glas leeg = gewonnen.** Raak je een obstakel, dan val je flauw en moet je opdrinken wat er nog in je glas zit.
 - **Meerdere spelers:** maak voor iedereen een eigen poppetje, tik op wie er meedoen en speel om de beurt. Na de laatste speler zie je wie het meest moet drinken.
+- **Open vat:** af en toe staat er een open wijnvat (wijndrinkers) of biervat (bierdrinkers). Spring er van boven in en je komt 100 meter lang in een wijnkelder of brouwerij. Tegen de zijkant aan lopen is gevaarlijk.
 - **Omgeving:** lange tafels waar je op kunt springen (met flesjes erop), verkeerspaaltjes om overheen te springen, een beveiliger die achter je aan rent tot hij over het volgende obstakel struikelt, en elke 150 m een dansvloer met discobal.
 - **Poppetjes-maker:** man/vrouw, lengte, postuur, houding, bochel, borst, buik, billen, huid, ogen, kapsel, baard, bril, kleding, schoenen, hoofddeksel en een foto van je eigen gezicht (blijft alleen op je apparaat).
 

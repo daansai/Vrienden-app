@@ -205,7 +205,7 @@ $('btnHome').onclick = () => goHome();
 let state = 'menu', player, obstacles = [], items = [], speed = 330, score = 0, itemCount = 0, spawnIn = 1, time = 0, phase = 0, faintT = 0, wonT = 0, lastT;
 let dust = [], motes = Array.from({ length: 34 }, (_, i) => ({ x: (i * 97) % 800, y: 30 + (i * 53) % 280, r: 0.8 + (i % 3) * 0.5, v: 4 + i % 5, p: i })), shake = 0, wasAir = false, dustT = 0, nextMile = 100;
 let level = 1, dispLevel = 1, pulse = 0, popups = [], confetti = [], overShown = false, hintT = 0;
-let finishObj = null, finT = 0, drunk = 0, shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
+let bonus = null, bonusKind = 'wine', bonusBlend = 0, flash = 0, flashCol = '#fff', nextVatAt = 200, finishObj = null, finT = 0, drunk = 0, shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
 const input = { duck: false }; let jumpHeld = false;
 const rnd = (a, b) => a + Math.random() * (b - a);
 // de beveiliger: een grote kerel in het zwart
@@ -218,7 +218,7 @@ function initRun(f) {
   obstacles = []; items = []; popups = []; confetti = []; dust = [];
   speed = MODES[mode].base; score = 0; itemCount = 0; spawnIn = 1; time = 0; phase = 0; faintT = 0; wonT = 0;
   level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; shake = 0; wasAir = false; nextMile = 100;
-  drunk = 0; shotCount = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28); zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
+  drunk = 0; bonus = null; bonusBlend = 0; flash = 0; nextVatAt = rnd(150, 300); shotCount = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28); zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
 }
 function setOver(o) {
   $('overTitle').textContent = o.title; $('overScore').textContent = o.text || ''; $('overDrink').textContent = o.drink || '';
@@ -251,7 +251,9 @@ function pop(text, x, y, color) { popups.push({ text, x, y, color, t: 0 }); }
 function spawn() {
   const r = Math.random(), x = W + 40;
   let o;
-  if (r < 0.2) o = { type: 'barrel', x, w: 50, h: 46, y: GROUND - 46 };
+  if (!bonus && !finishObj && score >= nextVatAt && score < FINISH - 300) { // open vat: spring erin voor een bonusomgeving
+    o = { type: 'vat', x, w: 76, h: 86, y: GROUND - 86, liquid: mode === 2 ? 'wine' : 'beer' }; nextVatAt = score + rnd(250, 450);
+  } else if (r < 0.2) o = { type: 'barrel', x, w: 50, h: 46, y: GROUND - 46 };
   else if (r < 0.32) o = { type: 'shards', x, w: 66, h: 30, y: GROUND - 30 };
   else if (r < 0.44) o = { type: 'crates', x, w: 44, h: 78, y: GROUND - 78 };
   else if (r < 0.62) { const k = 1 + (Math.random() * 3 | 0); o = { type: 'bollard', x, w: 16 + (k - 1) * 30, k, h: 56, y: GROUND - 56 }; } // verkeerspaaltjes
@@ -265,14 +267,17 @@ function spawn() {
     const cnt = Math.floor((o.w - 30) / 26);
     for (let i = 0; i < cnt; i++) items.push({ type: 'main', x: x + 18 + i * 26, y: o.y - 24, got: false });
     if (Math.random() < 0.6) items.push({ type: 'shot', x: x + o.w / 2, y: o.y - 62, got: false });
-  } else if (Math.random() < 0.8) {
+  } else if (o.type === 'vat' || Math.random() < (bonus ? 1 : 0.8)) {
     for (let i = 0; i < n; i++) {
       const k = i / (n - 1);
       items.push({ type: 'main', x: x + o.w / 2 - 50 + k * 100, y: o.y - 24 - Math.sin(k * Math.PI) * 60, got: false });
     }
   }
   // een shotje (bijvullen) op hoofdhoogte, vlak voor het obstakel
-  if (o.type !== 'table' && Math.random() < 0.4) items.push({ type: 'shot', x: x - 150, y: GROUND - rnd(40, 70), got: false });
+  if (o.type !== 'table' && Math.random() < (bonus ? 0.55 : 0.4)) { // shotje ongeveer midden tussen dit en het volgende obstakel
+    const minGap = speed * 1.1 + 140;
+    items.push({ type: 'shot', x: x + o.w + (minGap - o.w) * 0.4, y: GROUND - rnd(40, 70), got: false });
+  }
   // eerlijke afstand: genoeg tijd om te landen en te reageren, ook bij hoog tempo (een sprong duurt ca. 0,7 s)
   spawnIn = (speed * 1.1 + 140 + rnd(0, 380)) / speed + (o.type === 'lamp' ? 0.2 : 0) + (o.type === 'table' ? o.w / speed : 0);
 }
@@ -289,6 +294,12 @@ function collect(c) {
     itemCount++; level = Math.max(0, level - M.drain);
     if (level <= 0) win();
   }
+}
+function enterBonus(o) { // in het vat gesprongen: 100 meter wijnkelder of brouwerij
+  bonus = { until: score + 100 }; bonusKind = o.liquid; zone = 0; flash = 1; flashCol = o.liquid === 'wine' ? '#8a1c40' : '#f4b01c';
+  for (let i = 0; i < 28; i++) dust.push({ x: o.x + o.w / 2, y: o.y, vx: rnd(-170, 170), vy: rnd(-340, -120), t: 0, r: rnd(2, 5), g: true, col: o.liquid === 'wine' ? '170,30,75' : '245,175,30' });
+  obstacles = []; items = []; bouncer = null; bouncerIn = rnd(26, 40); spawnIn = 1.6; player.y = GROUND; player.vy = 0; player.on = true; shake = 0.2;
+  pop(o.liquid === 'wine' ? 'Wijnkelder! 100 meter' : 'Brouwerij! 100 meter', W / 2 - 70, 130, '#ffd43b');
 }
 function faintNow() {
   state = 'faint'; faintT = 0; shake = 0.3;
@@ -357,8 +368,8 @@ function update(dt) {
   const M = MODES[mode];
   if (state === 'menu') return;
   dispLevel += (level - dispLevel) * Math.min(1, dt * 7); pulse = Math.max(0, pulse - dt); shake = Math.max(0, shake - dt); drunk = Math.max(0, drunk - dt);
-  zoneBlend += (zone - zoneBlend) * Math.min(1, dt * 1.5);
-  for (const d of dust) { d.t += dt; d.x += d.vx * dt - (state === 'play' ? speed * dt : 0); d.y += d.vy * dt; }
+  zoneBlend += (zone - zoneBlend) * Math.min(1, dt * 1.5); bonusBlend += ((bonus ? 1 : 0) - bonusBlend) * Math.min(1, dt * 3); flash = Math.max(0, flash - dt * 1.6);
+  for (const d of dust) { if (d.g) d.vy += 700 * dt; d.t += dt; d.x += d.vx * dt - (state === 'play' ? speed * dt : 0); d.y += d.vy * dt; }
   dust = dust.filter(d => d.t < 0.6);
   for (const m of motes) { m.x -= m.v * dt; m.y += Math.sin(time * 0.6 + m.p) * 4 * dt; if (m.x < -5) m.x = W + 5; }
   popups.forEach(p => p.t += dt); popups = popups.filter(p => p.t < 1.1);
@@ -388,7 +399,8 @@ function update(dt) {
   wasAir = air; dustT -= dt;
   if (!air && dustT <= 0) { dustT = player.duck ? 0.07 : 0.11; dust.push({ x: player.x - 10, y: player.y - 2, vx: rnd(-50, -10), vy: rnd(-30, -8), t: 0, r: rnd(1.5, 3) }); }
   if (score >= nextMile) { pop(nextMile + ' m!', 84, 64, '#ffd43b'); nextMile += 100; }
-  const nz = Math.floor(score / 150) % 2; // elke 150 m wisselt het café tussen bar en dansvloer
+  if (bonus && score >= bonus.until) { bonus = null; flash = 0.9; pop('Terug in het café', W / 2 - 60, 130, '#ffd43b'); nextVatAt = Math.max(nextVatAt, score + 200); }
+  const nz = bonus ? 0 : Math.floor(score / 150) % 2; // elke 150 m wisselt het café tussen bar en dansvloer
   if (nz !== zone) { zone = nz; pop(zone ? 'Dansvloer!' : 'Terug in het café', W / 2 - 50, 130, '#ff9de2'); }
   bouncerIn -= dt;
   if (!bouncer && bouncerIn <= 0 && score < FINISH - 150) { bouncer = { x: -90, ph: 0, age: 0, state: 'chase', fallT: 0, target: null, idle: false }; bouncerIn = rnd(26, 40); }
@@ -407,7 +419,12 @@ function update(dt) {
   const pb = playerBox();
   for (const o of obstacles) {
     let hit;
-    if (o.type === 'table') hit = pb.x < o.x + o.w - 6 && pb.x + pb.w > o.x + 6 && player.y > o.y + 14;
+    if (o.type === 'vat') {
+      if (pb.x < o.x + o.w - 8 && pb.x + pb.w > o.x + 8) {
+        if (player.y <= o.y + 28 && player.vy >= 0 && !player.on) { enterBonus(o); return; } // van boven erin vallen
+        hit = player.y > o.y + 28; // tegen de zijkant lopen doet pijn
+      } else hit = false;
+    } else if (o.type === 'table') hit = pb.x < o.x + o.w - 6 && pb.x + pb.w > o.x + 6 && player.y > o.y + 14;
     else if (o.type === 'shards') hit = pb.x < o.x + o.w - 8 && pb.x + pb.w > o.x + 8 && pb.y + pb.h > o.y + 8;
     else hit = pb.x < o.x + o.w - 5 && pb.x + pb.w > o.x + 5 && pb.y < o.y + o.h - 3 && pb.y + pb.h > o.y + 3;
     if (hit) return faintNow();
@@ -494,6 +511,23 @@ function drawObstacle(o) {
       ctx.beginPath(); ctx.moveTo(sx, o.h - 2); ctx.lineTo(sx + sw * 0.45, o.h - sh_); ctx.lineTo(sx + sw, o.h - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(sx + sw * 0.4, o.h - sh_ + 4); ctx.lineTo(sx + sw * 0.3, o.h - 6); ctx.stroke();
     }
+  } else if (o.type === 'vat') {
+    const wine = o.liquid === 'wine', cx = o.w / 2;
+    const gl = ctx.createRadialGradient(cx, -6, 4, cx, -6, 70); gl.addColorStop(0, wine ? 'rgba(255,110,160,.4)' : 'rgba(255,215,110,.45)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl; ctx.fillRect(-60, -80, o.w + 120, 140);
+    const g = ctx.createLinearGradient(0, 0, o.w, 0); g.addColorStop(0, '#5e3210'); g.addColorStop(0.4, '#a8682c'); g.addColorStop(1, '#4a2609');
+    ctx.fillStyle = g; ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(6, 8); ctx.quadraticCurveTo(-6, o.h / 2, 6, o.h); ctx.lineTo(o.w - 6, o.h); ctx.quadraticCurveTo(o.w + 6, o.h / 2, o.w - 6, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(40,20,5,.5)'; ctx.lineWidth = 1; for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(o.w * i / 6, 14); ctx.lineTo(o.w * i / 6, o.h - 2); ctx.stroke(); }
+    for (const yy of [24, o.h / 2 + 4, o.h - 18]) { ctx.fillStyle = '#3d3d44'; ctx.fillRect(-2, yy, o.w + 4, 6); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(-2, yy, o.w + 4, 1.5); }
+    ctx.fillStyle = '#2a1608'; ctx.beginPath(); ctx.ellipse(cx, 8, cx - 1, 11, 0, 0, 7); ctx.fill();
+    const lg = ctx.createRadialGradient(cx, 9, 2, cx, 9, cx); lg.addColorStop(0, wine ? '#c93a68' : '#ffd25e'); lg.addColorStop(1, wine ? '#5c0f27' : '#c27a0b');
+    ctx.fillStyle = lg; ctx.beginPath(); ctx.ellipse(cx, 9, cx - 6, 8, 0, 0, 7); ctx.fill();
+    if (!wine) { ctx.fillStyle = 'rgba(255,246,223,.9)'; for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.arc(cx + Math.cos(i * 0.8 + time * 2) * (cx - 14), 9 + Math.sin(i * 0.8 + time * 2) * 5, 3.2, 0, 7); ctx.fill(); } }
+    else { ctx.fillStyle = 'rgba(255,200,215,.35)'; ctx.beginPath(); ctx.ellipse(cx - 8, 6, 14, 2.5, 0, 0, 7); ctx.fill(); }
+    const by = -38 + Math.sin(time * 6 + o.x * 0.02) * 5;
+    ctx.fillStyle = '#ffd43b'; ctx.strokeStyle = '#7a5200'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 9, by); ctx.lineTo(cx + 9, by); ctx.lineTo(cx, by + 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = '800 13px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('Spring erin!', cx, by - 6); ctx.textAlign = 'left';
   } else if (o.type === 'bollard') {
     for (let i = 0; i < o.k; i++) {
       const bx = i * 30;
@@ -649,6 +683,100 @@ function drawBg() {
     ctx.strokeStyle = 'rgba(30,15,5,.7)';
   });
 }
+function drawCellar() { // wijnkelder: stenen muren, wijnrekken, grote vaten, lantaarns
+  ctx.fillStyle = '#1d1517'; ctx.fillRect(0, 0, W, GROUND);
+  let off = (bgX * 0.3) % 64;
+  const tones = ['#3a2c2c', '#41312f', '#362a2b', '#463533', '#3d2e2d'];
+  for (let r = 0; r < 12; r++) for (let x = -64; x < W + 64; x += 64) {
+    const k = (Math.floor((x + bgX * 0.3) / 64) * 7 + r * 13) % 5; ctx.fillStyle = tones[(k + 5) % 5]; ctx.fillRect(x - off + (r % 2) * 32, r * 29 + 1, 62, 27);
+  }
+  let g = ctx.createLinearGradient(0, 0, 0, GROUND); g.addColorStop(0, 'rgba(0,0,0,.55)'); g.addColorStop(0.5, 'rgba(0,0,0,.1)'); g.addColorStop(1, 'rgba(0,0,0,.3)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, GROUND);
+  // wijnrekken
+  off = (bgX * 0.5) % 330;
+  for (let i = -1; i < 3; i++) {
+    const x = i * 330 - off + 30;
+    ctx.fillStyle = '#4a2c12'; ctx.fillRect(x, 70, 7, 150); ctx.fillRect(x + 233, 70, 7, 150); ctx.fillRect(x + 116, 70, 7, 150);
+    for (const sy of [70, 118, 166, 214]) { ctx.fillStyle = '#6b4220'; ctx.fillRect(x, sy, 240, 6); }
+    for (const sy of [70, 118, 166]) for (let j = 0; j < 9; j++) {
+      const bx = x + 14 + j * 26 + (j > 3 ? 8 : 0);
+      ctx.fillStyle = '#10301a'; ctx.beginPath(); ctx.arc(bx, sy + 26, 10, 0, 7); ctx.fill(); ctx.fillStyle = '#2f7a45'; ctx.beginPath(); ctx.arc(bx, sy + 26, 6, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.arc(bx - 3, sy + 23, 2, 0, 7); ctx.fill();
+    }
+  }
+  // grote vaten langs de muur
+  off = (bgX * 0.65) % 230;
+  for (let x = -230; x < W + 230; x += 230) {
+    const bx = x - off + 20, by = 232, bw = 92, bh = 108;
+    const bg = ctx.createLinearGradient(bx, 0, bx + bw, 0); bg.addColorStop(0, '#4a260c'); bg.addColorStop(0.4, '#8f5424'); bg.addColorStop(1, '#3d1f09');
+    ctx.fillStyle = bg; ctx.strokeStyle = '#1e1005'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(bx + 8, by); ctx.quadraticCurveTo(bx - 8, by + bh / 2, bx + 8, by + bh); ctx.lineTo(bx + bw - 8, by + bh); ctx.quadraticCurveTo(bx + bw + 8, by + bh / 2, bx + bw - 8, by); ctx.closePath(); ctx.fill(); ctx.stroke();
+    for (const yy of [14, bh / 2 - 3, bh - 22]) { ctx.fillStyle = '#34343a'; ctx.fillRect(bx - 3, by + yy, bw + 6, 7); }
+    ctx.fillStyle = '#c9a227'; ctx.beginPath(); ctx.arc(bx + bw / 2, by + bh / 2 + 10, 7, 0, 7); ctx.fill(); ctx.fillStyle = '#6a5210'; ctx.fillRect(bx + bw / 2 - 2, by + bh / 2 + 10, 4, 18);
+    ctx.fillStyle = 'rgba(150,20,60,.8)'; ctx.beginPath(); ctx.ellipse(bx + bw / 2, by + bh / 2 + 36 + (time * 40 % 14), 2, 3, 0, 0, 7); ctx.fill();
+  }
+  // lantaarns
+  off = (bgX * 0.55) % 400;
+  for (let i = -1; i < 3; i++) {
+    const x = i * 400 + 200 - off, fl = 0.85 + 0.15 * Math.sin(time * 13 + i * 3);
+    const gl = ctx.createRadialGradient(x, 80, 4, x, 80, 150 * fl); gl.addColorStop(0, 'rgba(255,170,60,.55)'); gl.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = gl; ctx.fillRect(x - 160, 0, 320, 260);
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 60); ctx.stroke();
+    ctx.fillStyle = '#222'; ctx.fillRect(x - 11, 58, 22, 5); ctx.fillStyle = `rgba(255,200,90,${0.7 + 0.3 * fl})`; ctx.fillRect(x - 8, 63, 16, 24); ctx.fillStyle = '#222'; ctx.fillRect(x - 11, 87, 22, 5);
+  }
+  // vloer van natuursteen met wijnplassen
+  g = ctx.createLinearGradient(0, GROUND, 0, H); g.addColorStop(0, '#6a5853'); g.addColorStop(1, '#2a201e'); ctx.fillStyle = g; ctx.fillRect(0, GROUND, W, H - GROUND);
+  ctx.fillStyle = '#1d1210'; ctx.fillRect(0, GROUND, W, 4);
+  off = bgX % 120; ctx.strokeStyle = 'rgba(15,8,6,.7)'; ctx.lineWidth = 3;
+  [GROUND + 38, GROUND + 76].forEach((yy, r) => { ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); for (let x = -120 + r * 55; x < W + 120; x += 120) { ctx.beginPath(); ctx.moveTo(x - off, yy - 38); ctx.lineTo(x - off, yy); ctx.stroke(); } });
+  const po = bgX % 420; for (let x = -420; x < W + 420; x += 420) { ctx.fillStyle = 'rgba(130,20,55,.55)'; ctx.beginPath(); ctx.ellipse(x - po + 200, GROUND + 24, 56, 7, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,170,190,.25)'; ctx.beginPath(); ctx.ellipse(x - po + 190, GROUND + 22, 30, 2, 0, 0, 7); ctx.fill(); }
+  ctx.fillStyle = 'rgba(80,10,45,.14)'; ctx.fillRect(0, 0, W, H);
+}
+function drawBrewery() { // brouwerij: koperen ketels, stalen tanks, leidingen en stoom
+  ctx.fillStyle = '#4a2012'; ctx.fillRect(0, 0, W, GROUND);
+  let off = (bgX * 0.3) % 44;
+  const tones = ['#8a4426', '#9a5030', '#7e3d22', '#a35a36'];
+  for (let r = 0; r < 19; r++) for (let x = -44; x < W + 44; x += 44) {
+    const k = (Math.floor((x + bgX * 0.3) / 44) * 5 + r * 11) % 4; ctx.fillStyle = tones[(k + 4) % 4]; ctx.fillRect(x - off + (r % 2) * 22, r * 18 + 1, 42, 16);
+  }
+  let g = ctx.createLinearGradient(0, 0, 0, GROUND); g.addColorStop(0, 'rgba(0,0,0,.45)'); g.addColorStop(1, 'rgba(0,0,0,.12)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, GROUND);
+  // stalen gistingstanks
+  off = (bgX * 0.4) % 520;
+  for (let i = -1; i < 3; i++) {
+    const x = i * 520 - off + 60, tw = 120;
+    const sg = ctx.createLinearGradient(x, 0, x + tw, 0); sg.addColorStop(0, '#7b858c'); sg.addColorStop(0.35, '#eef3f6'); sg.addColorStop(1, '#6a747b');
+    ctx.fillStyle = sg; ctx.fillRect(x, 80, tw, 230); ctx.beginPath(); ctx.ellipse(x + tw / 2, 80, tw / 2, 14, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; for (const yy of [140, 200, 260]) ctx.fillRect(x, yy, tw, 4);
+    ctx.fillStyle = '#4a545b'; ctx.beginPath(); ctx.arc(x + tw / 2, 165, 15, 0, 7); ctx.fill(); ctx.fillStyle = '#c5ced4'; ctx.beginPath(); ctx.arc(x + tw / 2, 165, 10, 0, 7); ctx.fill();
+    ctx.fillStyle = '#5a636a'; ctx.fillRect(x + 6, 310, 8, 30); ctx.fillRect(x + tw - 14, 310, 8, 30);
+  }
+  // leidingen
+  off = (bgX * 0.3) % 160;
+  for (const py of [34, 56]) {
+    const pg = ctx.createLinearGradient(0, py, 0, py + 12); pg.addColorStop(0, '#cfd6da'); pg.addColorStop(0.5, '#8d979d'); pg.addColorStop(1, '#5f696f'); ctx.fillStyle = pg; ctx.fillRect(0, py, W, 12);
+    for (let x = -160; x < W + 160; x += 160) { ctx.fillStyle = '#444b50'; ctx.fillRect(x - off + 20, py - 3, 8, 18); if (py === 34) { ctx.fillStyle = '#d6232a'; ctx.beginPath(); ctx.arc(x - off + 24, py - 8, 7, 0, 7); ctx.fill(); } }
+  }
+  // koperen ketels met stoom
+  off = (bgX * 0.6) % 340;
+  for (let i = -1; i < 3; i++) {
+    const x = i * 340 - off + 150, kw = 140, ky = 190, kh = 130;
+    const cg = ctx.createLinearGradient(x, 0, x + kw, 0); cg.addColorStop(0, '#7a3a14'); cg.addColorStop(0.35, '#e69a52'); cg.addColorStop(1, '#8e4519');
+    ctx.fillStyle = cg; ctx.strokeStyle = '#3a1a08'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(x, ky, kw, kh, [10, 10, 4, 4]); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(x + kw / 2, ky, kw / 2, 26, 0, Math.PI, 0); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = cg; ctx.fillRect(x + kw / 2 - 9, ky - 58, 18, 36); ctx.strokeRect(x + kw / 2 - 9, ky - 58, 18, 36);
+    ctx.fillStyle = 'rgba(60,25,8,.5)'; for (let j = 0; j < 9; j++) { ctx.beginPath(); ctx.arc(x + 10 + j * 15, ky + 12, 2.2, 0, 7); ctx.fill(); }
+    ctx.fillStyle = '#2a1608'; ctx.beginPath(); ctx.arc(x + kw / 2, ky + 62, 25, 0, 7); ctx.fill();
+    const wg = ctx.createRadialGradient(x + kw / 2, ky + 62, 2, x + kw / 2, ky + 62, 22); wg.addColorStop(0, '#ffd25e'); wg.addColorStop(1, '#c27a0b'); ctx.fillStyle = wg; ctx.beginPath(); ctx.arc(x + kw / 2, ky + 62, 21, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,246,223,.8)'; for (let j = 0; j < 5; j++) { ctx.beginPath(); ctx.arc(x + kw / 2 - 12 + j * 6, ky + 76 - ((time * 26 + j * 17) % 30), 2 + (j % 2), 0, 7); ctx.fill(); }
+    for (let j = 0; j < 4; j++) { const t = ((time * 0.5 + j * 0.25 + i * 0.1) % 1); ctx.fillStyle = `rgba(255,255,255,${0.5 * (1 - t)})`; ctx.beginPath(); ctx.arc(x + kw / 2 + Math.sin(t * 5 + j) * 8, ky - 62 - t * 70, 7 + t * 14, 0, 7); ctx.fill(); }
+  }
+  // tegelvloer met schuimplassen
+  g = ctx.createLinearGradient(0, GROUND, 0, H); g.addColorStop(0, '#d2c1a4'); g.addColorStop(1, '#8a7a62'); ctx.fillStyle = g; ctx.fillRect(0, GROUND, W, H - GROUND);
+  ctx.fillStyle = '#4a3a2a'; ctx.fillRect(0, GROUND, W, 4);
+  const base = Math.floor(bgX / 55), ox = bgX % 55;
+  for (let i = -1; i < 16; i++) for (let r = 0; r < 2; r++) if ((base + i + r) % 2 === 0) { ctx.fillStyle = 'rgba(80,60,40,.22)'; ctx.fillRect(i * 55 - ox, GROUND + 4 + r * 55, 55, 55); }
+  const po = bgX % 380; for (let x = -380; x < W + 380; x += 380) { ctx.fillStyle = 'rgba(255,246,223,.8)'; ctx.beginPath(); ctx.ellipse(x - po + 190, GROUND + 26, 50, 7, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(240,170,40,.45)'; ctx.beginPath(); ctx.ellipse(x - po + 190, GROUND + 28, 38, 4, 0, 0, 7); ctx.fill(); }
+  ctx.fillStyle = 'rgba(255,170,60,.08)'; ctx.fillRect(0, 0, W, H);
+}
 function drawFinish() { // finishboog met geblokte vlag
   const x = finishObj.x, top = GROUND - 190;
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x + 60, GROUND + 2, 70, 6, 0, 0, 7); ctx.fill();
@@ -718,6 +846,11 @@ function drawHUD() {
   if (mode === 1) drawBottle(197, 31, 0.6); else drawWine(189, 17, 16, 28, 0.4);
   ctx.fillStyle = '#fff'; ctx.font = '800 21px Nunito, system-ui, sans-serif'; ctx.fillText(itemCount, 216, 32);
   ctx.textAlign = 'right'; ctx.font = '700 14px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#ffe9b8'; ctx.fillText('Best ' + best + ' m', W - 16, 30); ctx.textAlign = 'left';
+  if (bonus) {
+    const txt = (bonusKind === 'wine' ? '🍷 Wijnkelder' : '🍺 Brouwerij') + ` · nog ${Math.max(0, Math.ceil(bonus.until - score))} m`;
+    ctx.font = '800 14px Nunito, system-ui, sans-serif'; const tw = ctx.measureText(txt).width + 28; pill(W / 2 - tw / 2, 12, tw, 28);
+    ctx.fillStyle = '#ffe9b8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, W / 2, 27); ctx.textAlign = 'left';
+  }
   const pr = Math.min(1, score / FINISH);
   ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.roundRect(BADGE.x + 8, 57, 250, 8, 4); ctx.fill();
   ctx.fillStyle = '#ffc933'; ctx.beginPath(); ctx.roundRect(BADGE.x + 8, 57, Math.max(8, 250 * pr), 8, 4); ctx.fill();
@@ -747,8 +880,9 @@ function drawStars(cx, cy, t) {
 function renderScene(ts) {
   if (state === 'play') bgX += speed * (1 / 60);
   drawBg();
+  if (bonusBlend > 0.01) { ctx.globalAlpha = Math.min(1, bonusBlend); if (bonusKind === 'wine') drawCellar(); else drawBrewery(); ctx.globalAlpha = 1; }
   if (state === 'menu') { vignette(); return; }
-  if (zoneBlend > 0.01) drawDisco(zoneBlend);
+  if (zoneBlend * (1 - bonusBlend) > 0.01) drawDisco(zoneBlend * (1 - bonusBlend));
   for (const m of motes) { ctx.fillStyle = `rgba(255,236,170,${0.25 + 0.2 * Math.sin(time * 2 + m.p)})`; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 7); ctx.fill(); }
   for (const c of items) drawItem(c, Math.sin(time * 5 + c.x * 0.05) * 3);
   obstacles.forEach(drawObstacle);
@@ -760,7 +894,7 @@ function renderScene(ts) {
   else if (state === 'won') { pose = 'cheer'; py = player.y - Math.abs(Math.sin(wonT * 7)) * 18; }
   else if (!player.on) pose = 'jump';
   else if (player.duck && player.on) pose = 'duck';
-  for (const d of dust) { ctx.fillStyle = `rgba(214,186,150,${0.55 * (1 - d.t / 0.6)})`; ctx.beginPath(); ctx.arc(d.x, d.y, d.r * (1 + d.t * 2), 0, 7); ctx.fill(); }
+  for (const d of dust) { ctx.fillStyle = `rgba(${d.col || '214,186,150'},${0.55 * (1 - d.t / 0.6)})`; ctx.beginPath(); ctx.arc(d.x, d.y, d.r * (1 + d.t * 2), 0, 7); ctx.fill(); }
   if (bouncer) drawBouncer();
   const dI = Math.min(1, drunk / 2);
   ctx.save(); if (dI > 0 && !fa) { ctx.translate(player.x, py); ctx.rotate(Math.sin(performance.now() / 260) * 0.13 * dI); ctx.translate(-player.x + Math.sin(performance.now() / 410) * 7 * dI, -py); }
@@ -769,6 +903,7 @@ function renderScene(ts) {
   if (fa) { const th = fa * Math.PI / 2; drawStars(player.x - 70 * Math.sin(th), player.y - 70 * Math.cos(th) - 9 * fa, faintT); }
   vignette();
   drawHUD();
+  if (flash > 0) { ctx.globalAlpha = Math.min(1, flash) * 0.8; ctx.fillStyle = flashCol; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   if (state === 'play') drawButtons();
   if (state === 'play' && hintT < 5) {
     ctx.globalAlpha = Math.min(1, 5 - hintT); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.roundRect(W / 2 - 250, 70, 500, 30, 15); ctx.fill();
