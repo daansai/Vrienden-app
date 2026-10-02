@@ -64,3 +64,16 @@ button.big{background:linear-gradient(#6fd44a,#48a82a);box-shadow:0 3px 0 #2d6a1
 .rl{display:flex;justify-content:space-between;font-size:11px;opacity:.65}
 input[type=range]{width:100%;accent-color:#ffc933}
 .drink{border:1px solid rgba(255,214,140,.4)}
+
+.card .num{position:absolute;top:-8px;left:-8px;min-width:24px;height:24px;border-radius:12px;background:#ffc933;color:#2a1608;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center}
+.card .num:empty{display:none}
+.board table{border-collapse:collapse;font-size:14px;min-width:min(420px,80vw)}
+.board th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#e9c88a;text-align:left;padding:2px 8px}
+.board td{padding:4px 8px;border-top:1px solid rgba(255,214,140,.2);text-align:left}
+.board tr.worst td{color:#ffd43b;font-weight:800}
+.board:empty{display:none}
+.boardnote{color:#ffd43b;font-weight:800;margin:4px 0 0}
+.btnlike{display:inline-block;padding:8px 14px;border-radius:10px;background:#4a3a3a;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.photoctl{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+#photoPrev{border-radius:50%;border:2px solid #f5a300;background:rgba(255,255,255,.08)}
+.photosl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;font-size:13px;flex:1 1 200px}

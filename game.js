@@ -26,23 +26,28 @@ const MODES = {
   2: { name: 'Wijnglazen', base: 330, grow: 9, max: 780, drain: 0.075, refill: 0.09 } // zelfde tempo als bier; wijn is sterker, dus het glas gaat sneller leeg
 };
 
-/* ---------- menu ---------- */
-const current = () => friends.find(f => f.id === selectedId) || friends[0];
-function saveAll() { store.set('friends', friends); store.set('selected', selectedId); }
+/* ---------- menu & spelers ---------- */
+let chosen = store.get('chosen', [selectedId]).filter(id => friends.some(f => f.id === id));
+if (!chosen.length) chosen = [friends[0].id];
+function saveAll() { store.set('friends', friends); store.set('selected', selectedId); store.set('chosen', chosen); }
+const esc = t => String(t).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 function renderRoster() {
   const r = $('roster'); r.innerHTML = '';
   for (const f of friends) {
-    const d = document.createElement('div'); d.className = 'card' + (f.id === selectedId ? ' sel' : '');
+    const pos = chosen.indexOf(f.id);
+    const d = document.createElement('div'); d.className = 'card' + (pos >= 0 ? ' sel' : '');
     const cc = document.createElement('canvas'); cc.width = 80; cc.height = 120;
     drawChar(cc.getContext('2d'), f, 40, 112, { pose: 'idle', scale: 1.1, shadow: false });
     const n = document.createElement('div'); n.textContent = f.name;
-    const e = document.createElement('button'); e.className = 'edit'; e.textContent = '✎';
+    const num = document.createElement('span'); num.className = 'num'; num.textContent = pos >= 0 ? pos + 1 : '';
+    const e = document.createElement('button'); e.className = 'edit'; e.textContent = '✎'; e.setAttribute('aria-label', 'Aanpassen');
     e.onclick = ev => { ev.stopPropagation(); openEditor(f); };
-    d.append(cc, n, e);
-    d.onclick = () => { selectedId = f.id; saveAll(); renderRoster(); };
+    d.append(cc, n, num, e);
+    d.onclick = () => { if (pos >= 0) { if (chosen.length > 1) chosen.splice(pos, 1); } else chosen.push(f.id); saveAll(); renderRoster(); };
     r.appendChild(d);
   }
+  $('btnPlay').textContent = chosen.length > 1 ? `Spelen met ${chosen.length} spelers` : 'Spelen';
   document.querySelectorAll('.mode').forEach(b => b.classList.toggle('sel', +b.dataset.mode === mode));
   $('best').textContent = best ? `Highscore ${mode === 1 ? 'Spel 1' : 'Spel 2'}: ${best} m` : '';
 }
@@ -114,7 +119,7 @@ function syncForm() {
 function openEditor(f) {
   editingNew = !f;
   draft = Object.assign({}, f ? f : BLANK, f ? {} : { id: Date.now() });
-  syncForm();
+  syncForm(); resetPhotoUI();
   $('menu').classList.add('hidden'); $('editor').classList.remove('hidden');
   $('btnDelete').style.display = f && friends.length > 1 ? '' : 'none';
 }
@@ -125,11 +130,12 @@ $('btnSave').onclick = () => {
   const o = Object.assign({}, draft); o.name = (o.name || '').trim() || 'Vriend';
   const i = friends.findIndex(f => f.id === o.id);
   if (i >= 0) friends[i] = o; else friends.push(o);
-  selectedId = o.id; saveAll(); renderRoster(); closeEditor();
+  selectedId = o.id; if (!chosen.includes(o.id)) chosen.push(o.id); saveAll(); renderRoster(); closeEditor();
 };
 $('btnDelete').onclick = () => {
   friends = friends.filter(f => f.id !== draft.id);
   if (selectedId === draft.id) selectedId = friends[0].id;
+  chosen = chosen.filter(id => id !== draft.id); if (!chosen.length) chosen = [friends[0].id];
   saveAll(); renderRoster(); closeEditor();
 };
 document.querySelectorAll('#poseBtns button').forEach(b => b.onclick = () => {
@@ -142,34 +148,103 @@ function drawPreview(ts) {
   const ph = t * 12;
   let y = 262, extra = {};
   if (edPose === 'jump') y = 262 - Math.abs(Math.sin(t * 3)) * 40;
-  drawChar(p, draft, 120, y, Object.assign({ pose: edPose, t: ph, scale: 2.6, airH: 262 - y }, extra));
+  drawChar(p, draft, 120, y, Object.assign({ pose: edPose, t: ph, scale: 2.3, airH: 262 - y }, extra));
 }
 buildForm();
-$('btnPlay').onclick = () => startGame();
-$('btnAgain').onclick = () => startGame();
+
+/* ---------- foto van je gezicht ---------- */
+let photoImg = null;
+function buildPhotoUI() {
+  const fs = document.createElement('fieldset');
+  fs.innerHTML = `<legend>Foto van je gezicht</legend>
+    <div class="fld photo">
+      <div class="row">
+        <label class="btnlike" for="photoIn">📷 Foto maken of kiezen</label>
+        <input type="file" id="photoIn" accept="image/*" capture="user" hidden>
+        <button type="button" id="photoDel">Foto weghalen</button>
+      </div>
+      <div class="photoctl">
+        <canvas id="photoPrev" width="96" height="96"></canvas>
+        <div class="photosl">
+          <label for="pz">Inzoomen</label><input type="range" id="pz" min="0" max="100" value="25">
+          <label for="px">Links / rechts</label><input type="range" id="px" min="0" max="100" value="50">
+          <label for="py">Omhoog / omlaag</label><input type="range" id="py" min="0" max="100" value="25">
+        </div>
+      </div>
+      <p class="hint">Het gezicht komt op je poppetje. De foto blijft alleen op dit apparaat staan.</p>
+    </div>`;
+  $('form').appendChild(fs);
+  $('photoIn').onchange = e => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    const rd = new FileReader();
+    rd.onload = () => { const im = new Image(); im.onload = () => { photoImg = im; $('pz').value = 25; $('px').value = 50; $('py').value = 25; renderPhoto(); }; im.src = rd.result; };
+    rd.readAsDataURL(file); e.target.value = '';
+  };
+  ['pz', 'px', 'py'].forEach(id => $(id).addEventListener('input', renderPhoto));
+  $('photoDel').onclick = () => { photoImg = null; draft.face = ''; clearPhotoPrev(); };
+}
+function clearPhotoPrev() { const pp = $('photoPrev').getContext('2d'); pp.clearRect(0, 0, 96, 96); pp.fillStyle = 'rgba(255,255,255,.08)'; pp.fillRect(0, 0, 96, 96); }
+function renderPhoto() {
+  if (!photoImg) return;
+  const w = photoImg.naturalWidth, h = photoImg.naturalHeight, base = Math.min(w, h);
+  const sz = base / (1 + $('pz').value / 50);
+  const sx = (w - sz) * $('px').value / 100, sy = (h - sz) * $('py').value / 100;
+  const c2 = document.createElement('canvas'); c2.width = c2.height = 128;
+  c2.getContext('2d').drawImage(photoImg, sx, sy, sz, sz, 0, 0, 128, 128);
+  draft.face = c2.toDataURL('image/jpeg', 0.82);
+  const pp = $('photoPrev').getContext('2d'); pp.clearRect(0, 0, 96, 96); pp.drawImage(c2, 0, 0, 96, 96);
+}
+function resetPhotoUI() {
+  photoImg = null; clearPhotoPrev();
+  if (draft.face) { const im = faceImage(draft.face); const show = () => $('photoPrev').getContext('2d').drawImage(im, 0, 0, 96, 96); if (im.complete) show(); else im.onload = show; }
+}
+buildPhotoUI();
+$('btnPlay').onclick = () => startSession();
+$('btnAgain').onclick = () => primary();
 $('btnHome').onclick = () => goHome();
 
 /* ---------- spel ---------- */
-let state = 'menu', player, obstacles, items, speed, score, itemCount, spawnIn, time = 0, phase = 0, faintT = 0, wonT = 0, lastT;
-let dust = [], motes = Array.from({ length: 34 }, (_, i) => ({ x: (i * 97) % 800, y: 30 + (i * 53) % 280, r: 0.8 + (i % 3) * 0.5, v: 4 + i % 5, p: i })), shake = 0, wasAir = false, dustT = 0, hatT = 0, nextMile = 100;
+let state = 'menu', player, obstacles = [], items = [], speed = 330, score = 0, itemCount = 0, spawnIn = 1, time = 0, phase = 0, faintT = 0, wonT = 0, lastT;
+let dust = [], motes = Array.from({ length: 34 }, (_, i) => ({ x: (i * 97) % 800, y: 30 + (i * 53) % 280, r: 0.8 + (i % 3) * 0.5, v: 4 + i % 5, p: i })), shake = 0, wasAir = false, dustT = 0, nextMile = 100;
 let level = 1, dispLevel = 1, pulse = 0, popups = [], confetti = [], overShown = false, hintT = 0;
+let shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
 const input = { duck: false }; let jumpHeld = false;
 const rnd = (a, b) => a + Math.random() * (b - a);
+// de beveiliger: een grote kerel in het zwart
+const BOUNCER = normalize({ id: -1, name: 'Beveiliger', gender: 'm', height: 'tall', build: 'broad', skin: SKIN[3], eyes: EYES[5], style: 'bald', hair: HAIR[0], beard: 'stubble', glasses: 'sun', top: 'blazer', topColor: '#15151c', bottom: 'chinos', bottomColor: '#15151c', shoes: '#0a0a0a', chest: 78, belly: 72, butt: 60, posture: 'upright' });
 
-function startGame() {
-  $('menu').classList.add('hidden'); $('over').classList.add('hidden'); $('editor').classList.add('hidden');
+function initRun(f) {
   best = store.get(bestKey(), 0);
-  player = { x: 150, y: GROUND, vy: 0, duck: false, f: current() };
-  obstacles = []; items = []; popups = []; confetti = [];
+  player = { x: 150, y: GROUND, vy: 0, on: true, duck: false, f };
+  obstacles = []; items = []; popups = []; confetti = []; dust = [];
   speed = MODES[mode].base; score = 0; itemCount = 0; spawnIn = 1; time = 0; phase = 0; faintT = 0; wonT = 0;
-  level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; dust = []; shake = 0; wasAir = false; hatT = 0; nextMile = 100; state = 'play';
+  level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; shake = 0; wasAir = false; nextMile = 100;
+  shotCount = 0; bouncer = null; bouncerIn = rnd(18, 28); zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
 }
+function setOver(o) {
+  $('overTitle').textContent = o.title; $('overScore').textContent = o.text || ''; $('overDrink').textContent = o.drink || '';
+  $('overBoard').innerHTML = o.board || ''; $('btnAgain').textContent = o.label; primary = o.fn; $('over').classList.remove('hidden');
+}
+function startSession() {
+  $('menu').classList.add('hidden'); $('editor').classList.add('hidden');
+  session = { queue: chosen.slice(), idx: 0, results: [] };
+  prepareTurn();
+}
+function prepareTurn() {
+  const f = friends.find(x => x.id === session.queue[session.idx]) || friends[0];
+  $('over').classList.add('hidden');
+  initRun(f);
+  if (session.queue.length > 1) {
+    setOver({ title: `Aan de beurt: ${f.name}`, text: `Speler ${session.idx + 1} van ${session.queue.length} · geef het scherm door`, label: 'Start', fn: beginRun });
+  } else beginRun();
+}
+function beginRun() { $('over').classList.add('hidden'); state = 'play'; }
 function goHome() {
-  state = 'menu'; $('over').classList.add('hidden'); $('menu').classList.remove('hidden'); best = store.get(bestKey(), 0); renderRoster();
+  state = 'menu'; session = null; $('over').classList.add('hidden'); $('menu').classList.remove('hidden'); best = store.get(bestKey(), 0); renderRoster();
 }
-function jump() { if (state === 'play' && player.y >= GROUND) player.vy = -820; }
+function jump() { if (state === 'play' && player.on) player.vy = -820; }
 function playerBox() {
-  const h = player.duck && player.y >= GROUND ? 62 : 90;
+  const h = player.duck && player.on ? 62 : 90;
   return { x: player.x - 12, y: player.y - h, w: 24, h };
 }
 function pop(text, x, y, color) { popups.push({ text, x, y, color, t: 0 }); }
@@ -177,14 +252,18 @@ function pop(text, x, y, color) { popups.push({ text, x, y, color, t: 0 }); }
 function spawn() {
   const r = Math.random(), x = W + 40;
   let o;
-  if (r < 0.4) o = { type: 'barrel', x, w: 50, h: 46, y: GROUND - 46 };
-  else if (r < 0.6) o = { type: 'shards', x, w: 66, h: 30, y: GROUND - 30 };
-  else if (r < 0.8) o = { type: 'crates', x, w: 44, h: 78, y: GROUND - 78 };
-  else o = { type: 'lamp', x, w: 46, h: 38, y: GROUND - 104 }; // hanglamp: bukken!
+  if (r < 0.27) o = { type: 'barrel', x, w: 50, h: 46, y: GROUND - 46 };
+  else if (r < 0.42) o = { type: 'shards', x, w: 66, h: 30, y: GROUND - 30 };
+  else if (r < 0.56) o = { type: 'crates', x, w: 44, h: 78, y: GROUND - 78 };
+  else if (r < 0.72) o = { type: 'lamp', x, w: 46, h: 38, y: GROUND - 104 }; // hanglamp: bukken!
+  else o = { type: 'table', x, w: 110, h: 55, y: GROUND - 55 }; // tafel: springen, erop landen mag
   obstacles.push(o);
   const n = 3 + (Math.random() * 3 | 0);
   if (o.type === 'lamp') {
     for (let i = 0; i < n; i++) items.push({ type: 'main', x: x - 60 + i * 34, y: GROUND - 24, got: false });
+  } else if (o.type === 'table') { // beloning voor wie op de tafel springt
+    for (let i = 0; i < 4; i++) items.push({ type: 'main', x: x + 16 + i * 26, y: o.y - 24, got: false });
+    if (Math.random() < 0.5) items.push({ type: 'shot', x: x + o.w / 2, y: o.y - 62, got: false });
   } else if (Math.random() < 0.8) {
     for (let i = 0; i < n; i++) {
       const k = i / (n - 1);
@@ -192,14 +271,18 @@ function spawn() {
     }
   }
   // een shotje (bijvullen) op hoofdhoogte, vlak voor het obstakel
-  if (Math.random() < 0.4) items.push({ type: 'shot', x: x - 150, y: GROUND - rnd(40, 70), got: false });
+  if (o.type !== 'table' && Math.random() < 0.4) items.push({ type: 'shot', x: x - 150, y: GROUND - rnd(40, 70), got: false });
   // eerlijke afstand: genoeg tijd om te landen en te reageren, ook bij hoog tempo (een sprong duurt ca. 0,7 s)
   spawnIn = (speed * 1.1 + 140 + rnd(0, 380)) / speed + (o.type === 'lamp' ? 0.2 : 0);
 }
 function collect(c) {
   const M = MODES[mode];
   if (c.type === 'shot') {
-    level = Math.min(1, level + M.refill); pulse = 0.7; pop('Bijgevuld!', 62, 56, '#7ee08a');
+    shotCount++;
+    if (shotCount % 3 === 0) { // easteregg: elk derde shotje vult het hele glas
+      level = 1; pulse = 1.4; pop('JACKPOT! Glas weer helemaal vol!', 110, 100, '#ffd43b');
+      for (let i = 0; i < 40; i++) confetti.push({ x: rnd(0, W), y: rnd(-120, 0), vx: rnd(-40, 40), vy: rnd(120, 260), r: rnd(0, 6), c: ['#ffc933', '#ff6b6b', '#4dabf7', '#69db7c', '#f783ac'][i % 5], loop: false });
+    } else { level = Math.min(1, level + M.refill); pulse = 0.7; pop('Bijgevuld!', 62, 56, '#7ee08a'); }
   } else {
     itemCount++; level = Math.max(0, level - M.drain);
     if (level <= 0) win();
@@ -214,62 +297,108 @@ function win() {
   state = 'won'; wonT = 0; overShown = false;
   const s = Math.floor(score);
   if (s > best) { best = s; store.set(bestKey(), best); }
-  for (let i = 0; i < 70; i++) confetti.push({ x: rnd(0, W), y: rnd(-200, 0), vx: rnd(-30, 30), vy: rnd(80, 220), r: rnd(0, 6), c: ['#ffc933', '#ff6b6b', '#4dabf7', '#69db7c', '#f783ac'][i % 5] });
+  for (let i = 0; i < 70; i++) confetti.push({ x: rnd(0, W), y: rnd(-200, 0), vx: rnd(-30, 30), vy: rnd(80, 220), r: rnd(0, 6), c: ['#ffc933', '#ff6b6b', '#4dabf7', '#69db7c', '#f783ac'][i % 5], loop: true });
 }
-function showOver(won) {
+function boardHtml() {
+  const rank = session.results.filter(Boolean).map(r => Object.assign({}, r)).sort((a, b) => a.won !== b.won ? (a.won ? -1 : 1) : a.won ? a.time - b.time : a.left - b.left);
+  const lost = rank.filter(r => !r.won), worst = lost[lost.length - 1];
+  return '<table><tr><th></th><th>Speler</th><th>Resultaat</th><th>Afstand</th></tr>' +
+    rank.map((r, i) => `<tr${r === worst ? ' class="worst"' : ''}><td>${i + 1}</td><td>${esc(r.name)}</td><td>${r.won ? '🏆 Glas leeg' : 'Drinkt ' + r.left + '%'}</td><td>${r.dist} m</td></tr>`).join('') +
+    '</table>' + (worst ? `<p class="boardnote">${esc(worst.name)} drinkt het meest!</p>` : '');
+}
+function showResult(won) {
   overShown = true;
-  $('overTitle').textContent = won ? 'Gewonnen! 🍻' : 'Flauwgevallen! 😵';
-  $('overScore').textContent = (won ? 'Je glas is leeg!  ' : '') + `Afstand ${Math.floor(score)} m  ·  ${MODES[mode].name}: ${itemCount}  ·  Highscore ${best} m`;
-  // verloren: wat er nog in het glas zit moet worden opgedronken
-  const left = Math.ceil(level * 100);
-  $('overDrink').textContent = won ? '' : `${mode === 1 ? '🍺' : '🍷'} Drink je glas op! Er zit nog ${left}% in.`;
-  $('over').classList.remove('hidden');
+  const left = Math.ceil(level * 100), dist = Math.floor(score), n = session.queue.length, last = session.idx >= n - 1;
+  session.results[session.idx] = { name: player.f.name, won, left, dist, time };
+  const base = {
+    title: won ? 'Gewonnen! 🍻' : 'Flauwgevallen! 😵',
+    text: (won ? 'Je glas is leeg! ' : '') + `Afstand ${dist} m · ${MODES[mode].name}: ${itemCount}`,
+    // verloren: wat er nog in het glas zit moet worden opgedronken
+    drink: won ? '' : `${mode === 1 ? '🍺' : '🍷'} ${player.f.name}, drink je glas op! Er zit nog ${left}% in.`
+  };
+  if (n === 1) setOver(Object.assign(base, { text: base.text + ` · Highscore ${best} m`, label: 'Opnieuw spelen', fn: prepareTurn }));
+  else if (!last) {
+    const nx = friends.find(x => x.id === session.queue[session.idx + 1]) || friends[0];
+    setOver(Object.assign(base, { label: `Volgende speler: ${nx.name}`, fn: () => { session.idx++; prepareTurn(); } }));
+  } else setOver(Object.assign(base, { board: boardHtml(), label: 'Nog een ronde', fn: () => { session.idx = 0; session.results = []; prepareTurn(); } }));
+}
+
+// natuurkunde: zwaartekracht, grond en tafels om op te landen
+function stepPhysics(dt, fastFall) {
+  const prev = player.y;
+  player.vy += (fastFall && !player.on ? 4200 : 2300) * dt;
+  player.y += player.vy * dt;
+  let land = GROUND;
+  if (player.vy >= 0) for (const o of obstacles) {
+    if (o.type === 'table' && player.x - 12 < o.x + o.w - 4 && player.x + 12 > o.x + 4 && prev <= o.y + 14 && player.y >= o.y) land = Math.min(land, o.y);
+  }
+  if (player.y >= land) { player.y = land; player.vy = 0; player.on = true; } else player.on = false;
+}
+function updateBouncer(dt) {
+  const b = bouncer; if (!b) return;
+  b.age += dt;
+  if (b.state === 'fall') { b.fallT += dt; b.x -= (state === 'play' ? speed : 0) * dt; if (b.x < -160 || b.fallT > 3) bouncer = null; return; }
+  const targetX = player.x - 85;
+  if (state === 'play') {
+    b.ph += dt * speed * 0.052;
+    if (b.x < targetX) b.x = Math.min(targetX, b.x + 320 * dt);
+    if (!b.target) { let t = null; for (const o of obstacles) if (o.x > player.x + 40 && (!t || o.x < t.x)) t = o; b.target = t; }
+    else if (b.target.x < b.x + 24 && b.target.x + b.target.w > b.x - 20) { // struikelt over het eerstvolgende obstakel
+      b.state = 'fall'; b.fallT = 0; score += 25; shake = 0.15; pop('Beveiliger uitgeschakeld! +25 m', 90, 150, '#ffd43b');
+    }
+  } else { // jij bent gevallen: hij rent naar je toe en blijft staan
+    if (b.x < targetX + 30) { b.x = Math.min(targetX + 30, b.x + 260 * dt); b.ph += dt * 14; b.idle = false; } else b.idle = true;
+  }
 }
 function update(dt) {
   const M = MODES[mode];
   if (state === 'menu') return;
-  dispLevel += (level - dispLevel) * Math.min(1, dt * 7); pulse = Math.max(0, pulse - dt); shake = Math.max(0, shake - dt); hatT = Math.max(0, hatT - dt);
+  dispLevel += (level - dispLevel) * Math.min(1, dt * 7); pulse = Math.max(0, pulse - dt); shake = Math.max(0, shake - dt);
+  zoneBlend += (zone - zoneBlend) * Math.min(1, dt * 1.5);
   for (const d of dust) { d.t += dt; d.x += d.vx * dt - (state === 'play' ? speed * dt : 0); d.y += d.vy * dt; }
   dust = dust.filter(d => d.t < 0.6);
   for (const m of motes) { m.x -= m.v * dt; m.y += Math.sin(time * 0.6 + m.p) * 4 * dt; if (m.x < -5) m.x = W + 5; }
   popups.forEach(p => p.t += dt); popups = popups.filter(p => p.t < 1.1);
+  for (const p of confetti) { p.x += p.vx * dt; p.y += p.vy * dt; p.r += dt * 6; if (p.y > H + 10) { if (p.loop) { p.y = -10; p.x = rnd(0, W); } else p.dead = true; } }
+  confetti = confetti.filter(p => !p.dead);
+  if (state === 'ready') return;
   if (state === 'faint') {
-    faintT += dt;
-    if (player.y < GROUND || player.vy < 0) { player.vy += 2300 * dt; player.y = Math.min(GROUND, player.y + player.vy * dt); if (player.y >= GROUND) player.vy = 0; }
-    if (faintT > 1.3 && !overShown) { state = 'over'; showOver(false); }
+    faintT += dt; stepPhysics(dt, false); updateBouncer(dt);
+    if (faintT > 1.3 && !overShown) { state = 'over'; showResult(false); }
     return;
   }
   if (state === 'won') {
-    wonT += dt;
-    for (const p of confetti) { p.x += p.vx * dt; p.y += p.vy * dt; p.r += dt * 6; if (p.y > H + 10) { p.y = -10; p.x = rnd(0, W); } }
-    if (player.y < GROUND || player.vy < 0) { player.vy += 2300 * dt; player.y = Math.min(GROUND, player.y + player.vy * dt); if (player.y >= GROUND) player.vy = 0; }
-    if (wonT > 1.6 && !overShown) showOver(true);
+    wonT += dt; stepPhysics(dt, false);
+    if (wonT > 1.6 && !overShown) showResult(true);
     return;
   }
+  if (state === 'over') { updateBouncer(dt); return; }
   if (state !== 'play') return;
   time += dt; hintT += dt; speed = Math.min(M.max, M.base + time * M.grow); score += speed * dt / 50; phase += dt * speed * 0.052;
   player.duck = input.duck;
-  if (player.y < GROUND || player.vy < 0) {
-    player.vy += (input.duck && player.y < GROUND ? 4200 : 2300) * dt;
-    player.y += player.vy * dt;
-    if (player.y >= GROUND) { player.y = GROUND; player.vy = 0; }
-  }
-  const air = player.y < GROUND;
-  if (wasAir && !air) for (let i = 0; i < 7; i++) dust.push({ x: player.x - 6, y: GROUND - 2, vx: rnd(-90, 60), vy: rnd(-40, -5), t: 0, r: rnd(2, 4) });
+  for (const o of obstacles) o.x -= speed * dt;
+  for (const c of items) c.x -= speed * dt;
+  stepPhysics(dt, input.duck);
+  const air = !player.on;
+  if (wasAir && !air) for (let i = 0; i < 7; i++) dust.push({ x: player.x - 6, y: player.y - 2, vx: rnd(-90, 60), vy: rnd(-40, -5), t: 0, r: rnd(2, 4) });
   wasAir = air; dustT -= dt;
-  if (!air && dustT <= 0) { dustT = player.duck ? 0.07 : 0.11; dust.push({ x: player.x - 10, y: GROUND - 2, vx: rnd(-50, -10), vy: rnd(-30, -8), t: 0, r: rnd(1.5, 3) }); }
-  if (score >= nextMile) { hatT = 2.2; pop(nextMile + ' m!', 84, 64, '#ffd43b'); nextMile += 100; }
+  if (!air && dustT <= 0) { dustT = player.duck ? 0.07 : 0.11; dust.push({ x: player.x - 10, y: player.y - 2, vx: rnd(-50, -10), vy: rnd(-30, -8), t: 0, r: rnd(1.5, 3) }); }
+  if (score >= nextMile) { pop(nextMile + ' m!', 84, 64, '#ffd43b'); nextMile += 100; }
+  const nz = Math.floor(score / 150) % 2; // elke 150 m wisselt het café tussen bar en dansvloer
+  if (nz !== zone) { zone = nz; pop(zone ? 'Dansvloer!' : 'Terug in het café', W / 2 - 50, 130, '#ff9de2'); }
+  bouncerIn -= dt;
+  if (!bouncer && bouncerIn <= 0) { bouncer = { x: -90, ph: 0, age: 0, state: 'chase', fallT: 0, target: null, idle: false }; bouncerIn = rnd(26, 40); }
+  updateBouncer(dt);
   spawnIn -= dt; if (spawnIn <= 0) spawn();
   const pb = playerBox();
   for (const o of obstacles) {
-    o.x -= speed * dt;
-    const hit = o.type === 'shards'
-      ? pb.x < o.x + o.w - 8 && pb.x + pb.w > o.x + 8 && pb.y + pb.h > o.y + 8
-      : pb.x < o.x + o.w - 5 && pb.x + pb.w > o.x + 5 && pb.y < o.y + o.h - 3 && pb.y + pb.h > o.y + 3;
+    let hit;
+    if (o.type === 'table') hit = pb.x < o.x + o.w - 6 && pb.x + pb.w > o.x + 6 && player.y > o.y + 14;
+    else if (o.type === 'shards') hit = pb.x < o.x + o.w - 8 && pb.x + pb.w > o.x + 8 && pb.y + pb.h > o.y + 8;
+    else hit = pb.x < o.x + o.w - 5 && pb.x + pb.w > o.x + 5 && pb.y < o.y + o.h - 3 && pb.y + pb.h > o.y + 3;
     if (hit) return faintNow();
   }
   for (const c of items) {
-    c.x -= speed * dt;
     if (!c.got && Math.abs(c.x - player.x) < 28 && c.y > pb.y - 14 && c.y < pb.y + pb.h + 14) { c.got = true; collect(c); if (state !== 'play') return; }
   }
   obstacles = obstacles.filter(o => o.x > -120);
@@ -351,6 +480,14 @@ function drawObstacle(o) {
       ctx.beginPath(); ctx.moveTo(sx, o.h - 2); ctx.lineTo(sx + sw * 0.45, o.h - sh_); ctx.lineTo(sx + sw, o.h - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(sx + sw * 0.4, o.h - sh_ + 4); ctx.lineTo(sx + sw * 0.3, o.h - 6); ctx.stroke();
     }
+  } else if (o.type === 'table') {
+    ctx.fillStyle = '#3a2210'; ctx.fillRect(9, 14, 8, o.h - 14); ctx.fillRect(o.w - 17, 14, 8, o.h - 14);
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(9, 14, 2, o.h - 14); ctx.fillRect(o.w - 17, 14, 2, o.h - 14);
+    const tg = ctx.createLinearGradient(0, 0, 0, 10); tg.addColorStop(0, '#c58a4a'); tg.addColorStop(1, '#8a5a2a');
+    ctx.fillStyle = tg; ctx.strokeStyle = '#3b2412'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-2, 0, o.w + 4, 10, 3); ctx.fill(); ctx.stroke();
+    for (let i = 0; i < 11; i++) for (let j = 0; j < 2; j++) { ctx.fillStyle = (i + j) % 2 ? '#f4efe2' : '#c92a2a'; ctx.fillRect(5 + i * 9.1, 10 + j * 8, 9.1, 8); }
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(5, 22, o.w - 10, 4);
+    ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillRect(0, 1, o.w, 2);
   } else { // hanglamp
     const sway = Math.sin(time * 3 + o.x * 0.01) * 0.04;
     ctx.translate(o.w / 2, 0); ctx.rotate(sway);
@@ -488,6 +625,36 @@ function drawBg() {
     ctx.strokeStyle = 'rgba(30,15,5,.7)';
   });
 }
+function drawDisco(a) { // dansvloer: gekleurde spots, discobal en lichtgevende tegels
+  ctx.fillStyle = `rgba(60,10,110,${0.3 * a})`; ctx.fillRect(0, 0, W, H);
+  const base = Math.floor(bgX / 40), ox = bgX % 40;
+  for (let i = -1; i < 21; i++) for (let r = 0; r < 3; r++) if ((base + i + r) % 2 === 0) {
+    ctx.fillStyle = `hsla(${(((base + i) * 37 + r * 90 + time * 60) % 360 + 360) % 360},90%,60%,${0.22 * a})`; ctx.fillRect(i * 40 - ox, GROUND + 6 + r * 34, 40, 34);
+  }
+  const bx = 400, by = 34;
+  for (let k = 0; k < 5; k++) {
+    const ang = Math.PI / 2 + Math.sin(time * 0.9 + k * 1.3) * 0.7 + (k - 2) * 0.28, len = 340, wd = 0.09;
+    const g = ctx.createLinearGradient(bx, by, bx + Math.cos(ang) * len, by + Math.sin(ang) * len);
+    g.addColorStop(0, `hsla(${(k * 70 + time * 50) % 360},95%,65%,${0.34 * a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ang - wd) * len, by + Math.sin(ang - wd) * len); ctx.lineTo(bx + Math.cos(ang + wd) * len, by + Math.sin(ang + wd) * len); ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = a; ctx.strokeStyle = '#222'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx, 0); ctx.lineTo(bx, by); ctx.stroke();
+  const gb = ctx.createRadialGradient(bx - 5, by + 8, 2, bx, by + 16, 18); gb.addColorStop(0, '#fff'); gb.addColorStop(1, '#6f7590');
+  ctx.fillStyle = gb; ctx.beginPath(); ctx.arc(bx, by + 16, 16, 0, 7); ctx.fill();
+  for (let i = 0; i < 12; i++) { const an = i * 0.9 + time * 2.5; ctx.fillStyle = `hsl(${(i * 40 + time * 80) % 360},90%,75%)`; ctx.fillRect(bx + Math.cos(an) * 11 - 1.5, by + 16 + Math.sin(an * 1.3) * 11 - 1.5, 3, 3); }
+  ctx.globalAlpha = 1;
+}
+function drawBouncer() {
+  const b = bouncer, fall = b.state === 'fall';
+  drawChar(ctx, BOUNCER, b.x, GROUND, { pose: fall ? 'faint' : (b.idle ? 'idle' : 'run'), t: b.ph, scale: 1.04, faint: fall ? Math.min(1, b.fallT / 0.4) : 0, fwd: true });
+  if (!fall && b.age < 2.8 && b.x > 0) {
+    const tx = Math.max(b.x + 10, 100), ty = GROUND - 150;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(tx - 6, ty - 22, 142, 28, 10); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(tx + 6, ty + 5); ctx.lineTo(tx + 14, ty + 15); ctx.lineTo(tx + 22, ty + 5); ctx.fill();
+    ctx.fillStyle = '#111'; ctx.font = '800 14px Nunito, system-ui, sans-serif'; ctx.textBaseline = 'middle'; ctx.fillText('Hé jij! Blijf staan!', tx, ty - 8);
+  }
+  if (fall && b.fallT > 0.35) drawStars(b.x + 70, GROUND - 6, b.fallT);
+}
 function vignette() {
   const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.62); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(10,3,0,.5)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -501,11 +668,6 @@ function drawPortrait(cx, cy, r) { // mini-portret van je eigen poppetje in de a
   drawChar(ctx, f, cx - 4, cy + 88 * k * hm, { pose: 'idle', scale: k, shadow: false });
   ctx.restore();
   ctx.strokeStyle = '#fff4d6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
-  if (hatT > 0) { // feestmutsje bij elke 100 meter
-    ctx.save(); ctx.translate(cx + 3, cy - r + 3); ctx.rotate(0.35);
-    ctx.fillStyle = '#e8590c'; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.lineTo(0, -17); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#ffd43b'; ctx.fillRect(-5, -6, 10, 2.5); ctx.beginPath(); ctx.arc(0, -17, 2.4, 0, 7); ctx.fill(); ctx.restore();
-  }
 }
 const BADGE = { x: 14, y: 10, w: 150, h: 42 };
 function pill(x, y, w, h) {
@@ -549,17 +711,20 @@ function renderScene(ts) {
   if (state === 'play') bgX += speed * (1 / 60);
   drawBg();
   if (state === 'menu') { vignette(); return; }
+  if (zoneBlend > 0.01) drawDisco(zoneBlend);
   for (const m of motes) { ctx.fillStyle = `rgba(255,236,170,${0.25 + 0.2 * Math.sin(time * 2 + m.p)})`; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 7); ctx.fill(); }
   for (const c of items) drawItem(c, Math.sin(time * 5 + c.x * 0.05) * 3);
   obstacles.forEach(drawObstacle);
   const fa = (state === 'faint' || state === 'over') ? Math.min(1, faintT / 0.35) : 0;
   let pose = 'run', py = player.y;
-  if (fa) pose = 'faint';
+  if (state === 'ready') pose = 'idle';
+  else if (fa) pose = 'faint';
   else if (state === 'won') { pose = 'cheer'; py = player.y - Math.abs(Math.sin(wonT * 7)) * 18; }
-  else if (player.y < GROUND) pose = 'jump';
-  else if (player.duck) pose = 'duck';
+  else if (!player.on) pose = 'jump';
+  else if (player.duck && player.on) pose = 'duck';
   for (const d of dust) { ctx.fillStyle = `rgba(214,186,150,${0.55 * (1 - d.t / 0.6)})`; ctx.beginPath(); ctx.arc(d.x, d.y, d.r * (1 + d.t * 2), 0, 7); ctx.fill(); }
-  drawChar(ctx, player.f, player.x, py, { pose, t: phase, scale: 1.0, faint: fa, airH: GROUND - py });
+  if (bouncer) drawBouncer();
+  drawChar(ctx, player.f, player.x, py, { pose, t: phase, scale: 1.0, faint: fa, airH: GROUND - py, fwd: false });
   if (fa) { const th = fa * Math.PI / 2; drawStars(player.x - 70 * Math.sin(th), player.y - 70 * Math.cos(th) - 9 * fa, faintT); }
   vignette();
   drawHUD();
@@ -588,10 +753,10 @@ function loop(ts) {
 
 /* ---------- invoer ---------- */
 const JUMP = ['ArrowUp', 'Space', 'KeyW'], DUCK = ['ArrowDown', 'KeyS'];
-const ended = () => state === 'over' || (state === 'won' && overShown);
+const ended = () => state === 'over' || state === 'ready' || (state === 'won' && overShown);
 addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-  if (JUMP.includes(e.code)) { e.preventDefault(); if (!e.repeat) { if (ended()) startGame(); else jump(); } }
+  if (JUMP.includes(e.code)) { e.preventDefault(); if (!e.repeat) { if (ended()) primary(); else jump(); } }
   if (DUCK.includes(e.code)) { e.preventDefault(); input.duck = true; }
   if (e.code === 'Escape' && state !== 'menu') goHome();
 });
@@ -602,7 +767,6 @@ const active = new Map();
 cv.addEventListener('pointerdown', e => {
   e.preventDefault();
   const pp = pointerPos(e);
-  if (state === 'play' && pp.x > BADGE.x && pp.x < BADGE.x + BADGE.w && pp.y > BADGE.y && pp.y < BADGE.y + BADGE.h) { hatT = 2.2; pop('Proost!', 84, 64, '#ffd43b'); return; }
   const left = pp.x < W / 2;
   active.set(e.pointerId, left ? 'duck' : 'jump');
   if (left) input.duck = true; else { jumpHeld = true; jump(); }

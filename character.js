@@ -22,7 +22,7 @@ const BLANK = {
   name: '', gender: 'm', height: 'normal', build: 'normal', skin: SKIN[2], eyes: EYES[0],
   style: 'short', hair: HAIR[2], beard: 'none', glasses: 'none',
   top: 'tshirt', topColor: '#3b82f6', bottom: 'jeans', bottomColor: '#2f4a7a', shoes: '#f1f1f1', hat: 'none',
-  posture: 'normal', hump: 0, chest: 50, belly: 50, butt: 50 // houding, bochel (0-100), borst/buik/billen (50 = gemiddeld)
+  face: '', posture: 'normal', hump: 0, chest: 50, belly: 50, butt: 50 // houding, bochel (0-100), borst/buik/billen (50 = gemiddeld)
 };
 // Oude opgeslagen vrienden omzetten naar het nieuwe formaat.
 function normalize(f) {
@@ -36,6 +36,8 @@ function normalize(f) {
 }
 
 /* ---------- hulpfuncties ---------- */
+const FACE_CACHE = {}; // gezichtsfoto's (data-URL) als Image, zodat ze maar één keer geladen worden
+function faceImage(src) { let i = FACE_CACHE[src]; if (!i) { i = FACE_CACHE[src] = new Image(); i.src = src; } return i; }
 function shade(hex, k) {
   if (hex.length === 4) hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
   const n = parseInt(hex.slice(1), 16);
@@ -104,7 +106,7 @@ function drawChar(c, f, x, y, o = {}) {
     ell(c, 0, 0, 22 * s, 4.5 * s, '#000'); c.globalAlpha = 1;
   }
   c.scale(s, s);
-  if (faint) { c.translate(0, -9 * faint); c.rotate(-faint * Math.PI / 2); }
+  if (faint) { c.translate(0, -9 * faint); c.rotate((o.fwd ? 1 : -1) * faint * Math.PI / 2); }
   c.lineJoin = 'round'; c.lineCap = 'round';
 
   const T = 23, S = 22;
@@ -196,6 +198,12 @@ function drawChar(c, f, x, y, o = {}) {
     limb(c, neckBase.x, neckBase.y, hd.x, hd.y + 2, 3.5 * (fem ? 0.9 : 1) * (bm > 1 ? 1.1 : 1), 3.3, shade(skin, 0.88));
     c.save(); c.translate(hd.x, hd.y); c.rotate(lean * 0.35 + J.tilt * 0.5 + (faint ? 0 : 0));
     const hl = shade(hairCol, 1.25);
+    const fimg = f.face ? faceImage(f.face) : null, photo = !!(fimg && fimg.complete && fimg.naturalWidth);
+    if (photo) { // echte foto van het gezicht (zoals een bobblehead)
+      c.save(); c.beginPath(); c.ellipse(1.5, -0.5, 10.6, 12, 0, 0, 7); c.clip();
+      c.drawImage(fimg, -11, -13.5, 25, 26); c.restore();
+      c.strokeStyle = shade(skin, 0.7); c.lineWidth = 0.9; c.beginPath(); c.ellipse(1.5, -0.5, 10.6, 12, 0, 0, 7); c.stroke();
+    } else {
     // haar achter
     if (f.style === 'long' || f.style === 'bob') {
       const len = f.style === 'long' ? 27 : 11;
@@ -278,6 +286,8 @@ function drawChar(c, f, x, y, o = {}) {
       else if (f.glasses === 'square') { c.fillStyle = 'rgba(190,225,255,.2)'; c.beginPath(); c.roundRect(ex - 3.3, ey - 3.1, 7.4, 6, 1.2); c.fill(); c.stroke(); }
       else { c.fillStyle = 'rgba(12,12,12,.92)'; c.beginPath(); c.roundRect(ex - 3.5, ey - 3.2, 8, 6.4, 2); c.fill(); c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(ex - 1.5, ey - 2.2, 1.2, 3); }
     }
+    }
+    if (photo) c.translate(0, -3.5);
     // hoed
     if (f.hat === 'cap') {
       c.fillStyle = '#2b8a3e'; c.beginPath(); c.ellipse(-0.3, -2.8, rx + 1.4, ry + 0.4, 0, Math.PI, Math.PI * 2); c.closePath(); c.fill();
