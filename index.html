@@ -12,7 +12,11 @@
 
   <div id="menu" class="panel">
     <h1>Vrienden Run</h1>
-    <p>Kies je poppetje en ren door de grot!</p>
+    <p>Kies je spel en je poppetje!</p>
+    <div class="row" id="modes">
+      <button class="mode" data-mode="1"><b>Spel 1</b><br>Groene flesjes 🍾<br><small>sneller tempo</small></button>
+      <button class="mode" data-mode="2"><b>Spel 2</b><br>Wijnglazen 🍷<br><small>rustiger tempo</small></button>
+    </div>
     <div id="roster"></div>
     <div class="row">
       <button id="btnPlay" class="big">Spelen</button>
@@ -22,11 +26,23 @@
     <p id="best"></p>
   </div>
 
+  <div id="over" class="panel hidden">
+    <h1>Flauwgevallen! 😵</h1>
+    <p id="overScore"></p>
+    <div class="row">
+      <button id="btnAgain" class="big">Opnieuw spelen</button>
+      <button id="btnHome">Hoofdmenu</button>
+    </div>
+  </div>
+
   <div id="editor" class="panel hidden">
     <h2>Maak je vriend na</h2>
     <canvas id="preview" width="160" height="180"></canvas>
     <div class="form">
       <label>Naam <input id="fName" maxlength="12" placeholder="Naam"></label>
+      <label>Man / vrouw
+        <select id="fGender"><option value="m">Man</option><option value="f">Vrouw</option></select>
+      </label>
       <label>Huid <input id="fSkin" type="color"></label>
       <label>Haarkleur <input id="fHair" type="color"></label>
       <label>Kapsel
@@ -36,6 +52,7 @@
           <option value="long">Lang</option>
           <option value="bun">Knotje</option>
           <option value="mohawk">Hanenkam</option>
+          <option value="ponytail">Paardenstaart</option>
           <option value="bald">Kaal</option>
         </select>
       </label>
