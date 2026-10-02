@@ -23,7 +23,7 @@ let best = store.get(bestKey(), 0);
 // drain = hoeveel van het glas er per flesje/wijnglas uitgaat, refill = hoeveel een shotje bijvult
 const MODES = {
   1: { name: 'Bierflesjes', base: 330, grow: 9, max: 780, drain: 0.035, refill: 0.08 },
-  2: { name: 'Wijnglazen', base: 230, grow: 5, max: 480, drain: 0.075, refill: 0.09 } // wijn is sterker: het glas gaat sneller leeg
+  2: { name: 'Wijnglazen', base: 330, grow: 9, max: 780, drain: 0.075, refill: 0.09 } // zelfde tempo als bier; wijn is sterker, dus het glas gaat sneller leeg
 };
 
 /* ---------- menu ---------- */
@@ -44,7 +44,7 @@ function renderRoster() {
     r.appendChild(d);
   }
   document.querySelectorAll('.mode').forEach(b => b.classList.toggle('sel', +b.dataset.mode === mode));
-  $('best').textContent = best ? `Highscore ${mode === 1 ? 'Spel 1' : 'Spel 2'}: ${best}` : '';
+  $('best').textContent = best ? `Highscore ${mode === 1 ? 'Spel 1' : 'Spel 2'}: ${best} m` : '';
 }
 document.querySelectorAll('.mode').forEach(b => b.onclick = () => {
   mode = +b.dataset.mode; store.set('mode', mode); best = store.get(bestKey(), 0); renderRoster();
@@ -54,7 +54,10 @@ document.querySelectorAll('.mode').forEach(b => b.onclick = () => {
 const SCHEMA = [
   { sec: 'Algemeen', items: [
     { k: 'name', t: 'text', l: 'Naam' }, { k: 'gender', t: 'sel', l: 'Man of vrouw' },
-    { k: 'height', t: 'sel', l: 'Lengte' }, { k: 'build', t: 'sel', l: 'Postuur' }] },
+    { k: 'height', t: 'sel', l: 'Lengte' }, { k: 'build', t: 'sel', l: 'Postuur' }, { k: 'posture', t: 'sel', l: 'Houding' }] },
+  { sec: 'Lichaamsvorm', items: [
+    { k: 'hump', t: 'rng', l: 'Bochel', lo: 'geen', hi: 'groot' }, { k: 'chest', t: 'rng', l: 'Borst', lo: 'plat', hi: 'groot' },
+    { k: 'belly', t: 'rng', l: 'Buik', lo: 'plat', hi: 'dik' }, { k: 'butt', t: 'rng', l: 'Billen', lo: 'klein', hi: 'groot' }] },
   { sec: 'Gezicht', items: [
     { k: 'skin', t: 'sw', l: 'Huidskleur', c: SKIN }, { k: 'eyes', t: 'sw', l: 'Oogkleur', c: EYES },
     { k: 'beard', t: 'sel', l: 'Baard en snor' }, { k: 'glasses', t: 'sel', l: 'Bril' }] },
@@ -76,6 +79,7 @@ function buildForm() {
       const lab = document.createElement('label'); lab.textContent = it.l; lab.htmlFor = 'f_' + it.k; w.appendChild(lab);
       let el;
       if (it.t === 'text') { el = document.createElement('input'); el.type = 'text'; el.maxLength = 12; el.placeholder = 'Naam'; }
+      else if (it.t === 'rng') { el = document.createElement('input'); el.type = 'range'; el.min = 0; el.max = 100; el.step = 1; }
       else if (it.t === 'col') { el = document.createElement('input'); el.type = 'color'; }
       else if (it.t === 'sel') {
         el = document.createElement('select');
@@ -89,9 +93,11 @@ function buildForm() {
         });
       }
       el.id = 'f_' + it.k;
-      if (it.t !== 'sw') el.addEventListener('input', () => { draft[it.k] = el.value; syncForm(); });
+      if (it.t !== 'sw') el.addEventListener('input', () => { draft[it.k] = it.t === 'rng' ? +el.value : el.value; syncForm(); });
       controls[it.k] = { el, it };
-      w.appendChild(el); fs.appendChild(w);
+      w.appendChild(el);
+      if (it.t === 'rng') { const rl = document.createElement('div'); rl.className = 'rl'; rl.innerHTML = `<span>${it.lo}</span><span>${it.hi}</span>`; w.appendChild(rl); }
+      fs.appendChild(w);
     }
     form.appendChild(fs);
   }
@@ -99,7 +105,7 @@ function buildForm() {
 function syncForm() {
   for (const [k, { el, it }] of Object.entries(controls)) {
     if (it.t === 'sw') el.querySelectorAll('.dot').forEach(b => b.classList.toggle('sel', b.dataset.c === draft[k]));
-    else if (el.value !== draft[k]) el.value = draft[k];
+    else if (String(el.value) !== String(draft[k])) el.value = draft[k];
   }
   // een jurk of rok past bij elkaar: houd de keuzes consistent
   if (draft.top === 'dress' && controls.bottom.el.disabled !== true) controls.bottom.el.disabled = true;
@@ -145,6 +151,7 @@ $('btnHome').onclick = () => goHome();
 
 /* ---------- spel ---------- */
 let state = 'menu', player, obstacles, items, speed, score, itemCount, spawnIn, time = 0, phase = 0, faintT = 0, wonT = 0, lastT;
+let dust = [], motes = Array.from({ length: 34 }, (_, i) => ({ x: (i * 97) % 800, y: 30 + (i * 53) % 280, r: 0.8 + (i % 3) * 0.5, v: 4 + i % 5, p: i })), shake = 0, wasAir = false, dustT = 0, hatT = 0, nextMile = 100;
 let level = 1, dispLevel = 1, pulse = 0, popups = [], confetti = [], overShown = false, hintT = 0;
 const input = { duck: false }; let jumpHeld = false;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -155,7 +162,7 @@ function startGame() {
   player = { x: 150, y: GROUND, vy: 0, duck: false, f: current() };
   obstacles = []; items = []; popups = []; confetti = [];
   speed = MODES[mode].base; score = 0; itemCount = 0; spawnIn = 1; time = 0; phase = 0; faintT = 0; wonT = 0;
-  level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; state = 'play';
+  level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; dust = []; shake = 0; wasAir = false; hatT = 0; nextMile = 100; state = 'play';
 }
 function goHome() {
   state = 'menu'; $('over').classList.add('hidden'); $('menu').classList.remove('hidden'); best = store.get(bestKey(), 0); renderRoster();
@@ -186,7 +193,8 @@ function spawn() {
   }
   // een shotje (bijvullen) op hoofdhoogte, vlak voor het obstakel
   if (Math.random() < 0.4) items.push({ type: 'shot', x: x - 150, y: GROUND - rnd(40, 70), got: false });
-  spawnIn = (rnd(0.9, 1.7) * (1 + (500 - Math.min(speed, 500)) / 900)) * (400 / speed) + 0.4;
+  // eerlijke afstand: genoeg tijd om te landen en te reageren, ook bij hoog tempo (een sprong duurt ca. 0,7 s)
+  spawnIn = (speed * 1.1 + 140 + rnd(0, 380)) / speed + (o.type === 'lamp' ? 0.2 : 0);
 }
 function collect(c) {
   const M = MODES[mode];
@@ -198,7 +206,7 @@ function collect(c) {
   }
 }
 function faintNow() {
-  state = 'faint'; faintT = 0;
+  state = 'faint'; faintT = 0; shake = 0.3;
   const s = Math.floor(score);
   if (s > best) { best = s; store.set(bestKey(), best); }
 }
@@ -211,7 +219,7 @@ function win() {
 function showOver(won) {
   overShown = true;
   $('overTitle').textContent = won ? 'Gewonnen! 🍻' : 'Flauwgevallen! 😵';
-  $('overScore').textContent = (won ? 'Je glas is leeg!  ' : '') + `Score ${Math.floor(score)}  ·  ${MODES[mode].name}: ${itemCount}  ·  Highscore ${best}`;
+  $('overScore').textContent = (won ? 'Je glas is leeg!  ' : '') + `Afstand ${Math.floor(score)} m  ·  ${MODES[mode].name}: ${itemCount}  ·  Highscore ${best} m`;
   // verloren: wat er nog in het glas zit moet worden opgedronken
   const left = Math.ceil(level * 100);
   $('overDrink').textContent = won ? '' : `${mode === 1 ? '🍺' : '🍷'} Drink je glas op! Er zit nog ${left}% in.`;
@@ -220,7 +228,10 @@ function showOver(won) {
 function update(dt) {
   const M = MODES[mode];
   if (state === 'menu') return;
-  dispLevel += (level - dispLevel) * Math.min(1, dt * 7); pulse = Math.max(0, pulse - dt);
+  dispLevel += (level - dispLevel) * Math.min(1, dt * 7); pulse = Math.max(0, pulse - dt); shake = Math.max(0, shake - dt); hatT = Math.max(0, hatT - dt);
+  for (const d of dust) { d.t += dt; d.x += d.vx * dt - (state === 'play' ? speed * dt : 0); d.y += d.vy * dt; }
+  dust = dust.filter(d => d.t < 0.6);
+  for (const m of motes) { m.x -= m.v * dt; m.y += Math.sin(time * 0.6 + m.p) * 4 * dt; if (m.x < -5) m.x = W + 5; }
   popups.forEach(p => p.t += dt); popups = popups.filter(p => p.t < 1.1);
   if (state === 'faint') {
     faintT += dt;
@@ -236,13 +247,18 @@ function update(dt) {
     return;
   }
   if (state !== 'play') return;
-  time += dt; hintT += dt; speed = Math.min(M.max, M.base + time * M.grow); score += speed * dt / 40; phase += dt * speed * 0.052;
+  time += dt; hintT += dt; speed = Math.min(M.max, M.base + time * M.grow); score += speed * dt / 50; phase += dt * speed * 0.052;
   player.duck = input.duck;
   if (player.y < GROUND || player.vy < 0) {
     player.vy += (input.duck && player.y < GROUND ? 4200 : 2300) * dt;
     player.y += player.vy * dt;
     if (player.y >= GROUND) { player.y = GROUND; player.vy = 0; }
   }
+  const air = player.y < GROUND;
+  if (wasAir && !air) for (let i = 0; i < 7; i++) dust.push({ x: player.x - 6, y: GROUND - 2, vx: rnd(-90, 60), vy: rnd(-40, -5), t: 0, r: rnd(2, 4) });
+  wasAir = air; dustT -= dt;
+  if (!air && dustT <= 0) { dustT = player.duck ? 0.07 : 0.11; dust.push({ x: player.x - 10, y: GROUND - 2, vx: rnd(-50, -10), vy: rnd(-30, -8), t: 0, r: rnd(1.5, 3) }); }
+  if (score >= nextMile) { hatT = 2.2; pop(nextMile + ' m!', 84, 64, '#ffd43b'); nextMile += 100; }
   spawnIn -= dt; if (spawnIn <= 0) spawn();
   const pb = playerBox();
   for (const o of obstacles) {
@@ -383,7 +399,7 @@ function drawGlassHUD() {
   ctx.restore();
   // niveau-aanduiding
   ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.roundRect(gx - 4, gy + 140, 76, 22, 11); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(Math.ceil(level * 100) + '% vol', gx + 34, gy + 151); ctx.textAlign = 'left';
 }
 
@@ -478,14 +494,35 @@ function vignette() {
 }
 
 /* ---------- tekenen: HUD en scène ---------- */
+function drawPortrait(cx, cy, r) { // mini-portret van je eigen poppetje in de afstandsmeter
+  const f = player.f, k = 1.5, hm = { short: 0.92, normal: 1, tall: 1.07 }[f.height] || 1;
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.clip();
+  const bg = ctx.createLinearGradient(0, cy - r, 0, cy + r); bg.addColorStop(0, '#f7c46a'); bg.addColorStop(1, '#c97d2b'); ctx.fillStyle = bg; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  drawChar(ctx, f, cx - 4, cy + 88 * k * hm, { pose: 'idle', scale: k, shadow: false });
+  ctx.restore();
+  ctx.strokeStyle = '#fff4d6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+  if (hatT > 0) { // feestmutsje bij elke 100 meter
+    ctx.save(); ctx.translate(cx + 3, cy - r + 3); ctx.rotate(0.35);
+    ctx.fillStyle = '#e8590c'; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.lineTo(0, -17); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd43b'; ctx.fillRect(-5, -6, 10, 2.5); ctx.beginPath(); ctx.arc(0, -17, 2.4, 0, 7); ctx.fill(); ctx.restore();
+  }
+}
+const BADGE = { x: 14, y: 10, w: 150, h: 42 };
+function pill(x, y, w, h) {
+  const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(40,22,12,.82)'); g.addColorStop(1, 'rgba(18,9,5,.82)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,214,140,.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+}
 function drawHUD() {
-  ctx.fillStyle = 'rgba(0,0,0,.55)';
-  ctx.beginPath(); ctx.roundRect(14, 12, 120, 36, 18); ctx.roundRect(148, 12, 100, 36, 18); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 20px system-ui'; ctx.textBaseline = 'middle';
-  ctx.fillText('🏃 ' + Math.floor(score), 28, 31);
-  if (mode === 1) drawBottle(166, 31, 0.6); else drawWine(158, 17, 16, 28, 0.4);
-  ctx.fillText(itemCount, 188, 31);
-  ctx.textAlign = 'right'; ctx.font = '15px system-ui'; ctx.fillStyle = '#ffd'; ctx.fillText('Best ' + best, W - 16, 30); ctx.textAlign = 'left';
+  pill(BADGE.x, BADGE.y, BADGE.w, BADGE.h); pill(176, BADGE.y, 96, BADGE.h);
+  drawPortrait(BADGE.x + 21, BADGE.y + 21, 16);
+  ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.font = '800 21px Nunito, system-ui, sans-serif';
+  const ds = String(Math.floor(score)), dw = ctx.measureText(ds).width;
+  ctx.fillText(ds, BADGE.x + 46, BADGE.y + 22);
+  ctx.fillStyle = '#e9c88a'; ctx.font = '700 13px Nunito, system-ui, sans-serif'; ctx.fillText('m', BADGE.x + 50 + dw, BADGE.y + 25);
+  if (mode === 1) drawBottle(197, 31, 0.6); else drawWine(189, 17, 16, 28, 0.4);
+  ctx.fillStyle = '#fff'; ctx.font = '800 21px Nunito, system-ui, sans-serif'; ctx.fillText(itemCount, 216, 32);
+  ctx.textAlign = 'right'; ctx.font = '700 14px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#ffe9b8'; ctx.fillText('Best ' + best + ' m', W - 16, 30); ctx.textAlign = 'left';
   drawGlassHUD();
 }
 const buttons = [{ key: 'duck', x: 20, y: H - 84, w: 70, h: 64 }, { key: 'jump', x: W - 90, y: H - 84, w: 70, h: 64 }];
@@ -508,10 +545,11 @@ function drawStars(cx, cy, t) {
     ctx.closePath(); ctx.fill(); ctx.stroke();
   }
 }
-function render(ts) {
+function renderScene(ts) {
   if (state === 'play') bgX += speed * (1 / 60);
   drawBg();
   if (state === 'menu') { vignette(); return; }
+  for (const m of motes) { ctx.fillStyle = `rgba(255,236,170,${0.25 + 0.2 * Math.sin(time * 2 + m.p)})`; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 7); ctx.fill(); }
   for (const c of items) drawItem(c, Math.sin(time * 5 + c.x * 0.05) * 3);
   obstacles.forEach(drawObstacle);
   const fa = (state === 'faint' || state === 'over') ? Math.min(1, faintT / 0.35) : 0;
@@ -520,6 +558,7 @@ function render(ts) {
   else if (state === 'won') { pose = 'cheer'; py = player.y - Math.abs(Math.sin(wonT * 7)) * 18; }
   else if (player.y < GROUND) pose = 'jump';
   else if (player.duck) pose = 'duck';
+  for (const d of dust) { ctx.fillStyle = `rgba(214,186,150,${0.55 * (1 - d.t / 0.6)})`; ctx.beginPath(); ctx.arc(d.x, d.y, d.r * (1 + d.t * 2), 0, 7); ctx.fill(); }
   drawChar(ctx, player.f, player.x, py, { pose, t: phase, scale: 1.0, faint: fa, airH: GROUND - py });
   if (fa) { const th = fa * Math.PI / 2; drawStars(player.x - 70 * Math.sin(th), player.y - 70 * Math.cos(th) - 9 * fa, faintT); }
   vignette();
@@ -527,13 +566,18 @@ function render(ts) {
   if (state === 'play') drawButtons();
   if (state === 'play' && hintT < 5) {
     ctx.globalAlpha = Math.min(1, 5 - hintT); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.roundRect(W / 2 - 250, 70, 500, 30, 15); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '15px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff'; ctx.font = '15px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(mode === 1 ? 'Pak flesjes om je bier leeg te drinken · shotjes vullen weer bij' : 'Pak wijnglazen om je wijn leeg te drinken · shotjes vullen weer bij', W / 2, 85);
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
-  if (state === 'play') { ctx.fillStyle = '#ffc933'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(player.f.name, player.x, player.y - 112 * ({ short: .92, normal: 1, tall: 1.07 }[player.f.height] || 1)); ctx.textAlign = 'left'; }
-  for (const p of popups) { ctx.globalAlpha = 1 - p.t / 1.1; ctx.fillStyle = p.color; ctx.font = 'bold 15px system-ui'; ctx.fillText(p.text, p.x, p.y - p.t * 30); ctx.globalAlpha = 1; }
+  if (state === 'play') { ctx.fillStyle = '#ffc933'; ctx.font = 'bold 14px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(player.f.name, player.x, player.y - 112 * ({ short: .92, normal: 1, tall: 1.07 }[player.f.height] || 1)); ctx.textAlign = 'left'; }
+  for (const p of popups) { ctx.globalAlpha = 1 - p.t / 1.1; ctx.fillStyle = p.color; ctx.font = 'bold 15px Nunito, system-ui, sans-serif'; ctx.fillText(p.text, p.x, p.y - p.t * 30); ctx.globalAlpha = 1; }
   for (const p of confetti) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-4, -2, 8, 4); ctx.restore(); }
+}
+function render(ts) {
+  ctx.save();
+  if (shake > 0) ctx.translate(rnd(-5, 5) * shake / 0.3, rnd(-5, 5) * shake / 0.3);
+  renderScene(ts); ctx.restore();
 }
 function loop(ts) {
   const dt = Math.min(0.05, ((ts - (lastT || ts)) / 1000)); lastT = ts;
@@ -557,7 +601,9 @@ function pointerPos(e) { const r = cv.getBoundingClientRect(); return { x: (e.cl
 const active = new Map();
 cv.addEventListener('pointerdown', e => {
   e.preventDefault();
-  const left = pointerPos(e).x < W / 2;
+  const pp = pointerPos(e);
+  if (state === 'play' && pp.x > BADGE.x && pp.x < BADGE.x + BADGE.w && pp.y > BADGE.y && pp.y < BADGE.y + BADGE.h) { hatT = 2.2; pop('Proost!', 84, 64, '#ffd43b'); return; }
+  const left = pp.x < W / 2;
   active.set(e.pointerId, left ? 'duck' : 'jump');
   if (left) input.duck = true; else { jumpHeld = true; jump(); }
 });

@@ -10,6 +10,7 @@ const OPT = {
   beard: [['none', 'Geen'], ['stubble', 'Stoppelbaard'], ['moustache', 'Snor'], ['beard', 'Volle baard']],
   glasses: [['none', 'Geen'], ['round', 'Ronde bril'], ['square', 'Vierkante bril'], ['sun', 'Zonnebril']],
   top: [['tshirt', 'T-shirt'], ['long', 'Trui / lange mouw'], ['hoodie', 'Hoodie'], ['blazer', 'Colbert'], ['tank', 'Hemdje'], ['dress', 'Jurk']],
+  posture: [['upright', 'Kaarsrecht'], ['normal', 'Normaal'], ['slouch', 'Voorovergebogen']],
   bottom: [['jeans', 'Jeans'], ['chinos', 'Nette broek'], ['shorts', 'Korte broek'], ['skirt', 'Rok']],
   hat: [['none', 'Geen'], ['cap', 'Pet'], ['beanie', 'Muts'], ['top', 'Hoge hoed']]
 };
@@ -20,7 +21,8 @@ const EYES = ['#3b2414', '#7a5a2a', '#4a8a55', '#3b78a8', '#7d9bb0', '#555555'];
 const BLANK = {
   name: '', gender: 'm', height: 'normal', build: 'normal', skin: SKIN[2], eyes: EYES[0],
   style: 'short', hair: HAIR[2], beard: 'none', glasses: 'none',
-  top: 'tshirt', topColor: '#3b82f6', bottom: 'jeans', bottomColor: '#2f4a7a', shoes: '#f1f1f1', hat: 'none'
+  top: 'tshirt', topColor: '#3b82f6', bottom: 'jeans', bottomColor: '#2f4a7a', shoes: '#f1f1f1', hat: 'none',
+  posture: 'normal', hump: 0, chest: 50, belly: 50, butt: 50 // houding, bochel (0-100), borst/buik/billen (50 = gemiddeld)
 };
 // Oude opgeslagen vrienden omzetten naar het nieuwe formaat.
 function normalize(f) {
@@ -29,6 +31,7 @@ function normalize(f) {
   if (f.pants && !f.bottomColor) o.bottomColor = f.pants;
   o.glasses = f.glasses === true ? 'round' : (!f.glasses || f.glasses === false ? 'none' : f.glasses);
   if (o.style === 'spiky') o.style = 'quiff';
+  for (const k of ['hump', 'chest', 'belly', 'butt']) { o[k] = Number(o[k]); if (isNaN(o[k])) o[k] = BLANK[k]; }
   return o;
 }
 
@@ -84,7 +87,16 @@ function drawChar(c, f, x, y, o = {}) {
   const s = (o.scale || 1) * ({ short: 0.92, normal: 1, tall: 1.07 }[f.height] || 1);
   const J = poseJoints(pose, ph);
   const skin = f.skin, hairCol = f.hair, hairDark = shade(f.hair, 0.65);
-  const hipx = J.hx, hipy = J.hy, lean = J.lean;
+  // lichaamsvorm: 50 = gemiddeld; borst, buik en billen zijn zichtbaar in zijaanzicht, de bochel zit op de bovenrug
+  const num = (v, d) => (v === undefined || v === null || isNaN(+v)) ? d : +v;
+  const ex = v => (num(v, 50) - 50) / 50;
+  const chestX = ex(f.chest) > 0 ? ex(f.chest) * 5 : ex(f.chest) * 2.5;
+  const bellyX = ex(f.belly) > 0 ? ex(f.belly) * 8 : ex(f.belly) * 3;
+  const buttX = ex(f.butt) > 0 ? ex(f.butt) * 6 : ex(f.butt) * 2.5;
+  const humpX = num(f.hump, 0) / 100 * 11;
+  const tb = 1 + buttX / 28;
+  const pl = faint ? 0 : ({ upright: -0.06, normal: 0, slouch: 0.14 }[f.posture] || 0);
+  const hipx = J.hx, hipy = J.hy, lean = J.lean + pl;
 
   c.save(); c.translate(x, y);
   if (o.shadow !== false && !faint) { // grondschaduw
@@ -99,6 +111,7 @@ function drawChar(c, f, x, y, o = {}) {
   const shoulder = { x: hipx + Math.sin(lean) * 22 + Math.cos(lean), y: hipy - Math.cos(lean) * 22 + Math.sin(lean) };
   const hd = { x: hipx + Math.sin(lean * 0.7) * 38.5, y: hipy - Math.cos(lean * 0.7) * 38.5 };
   const neckBase = { x: hipx + Math.sin(lean) * 24, y: hipy - Math.cos(lean) * 24 };
+  hd.x += humpX * 0.4; hd.y += humpX * 0.12; neckBase.x += humpX * 0.25; // bochel trekt het hoofd naar voren
 
   /* --- armen --- */
   const arm = i => {
@@ -122,11 +135,11 @@ function drawChar(c, f, x, y, o = {}) {
     const kx = hipx + Math.sin(a) * T, ky = hipy + Math.cos(a) * T;
     const ax = kx + Math.sin(b) * S, ay = ky + Math.cos(b) * S;
     const sk = shade(skin, k), pc = shade(f.bottomColor, k);
-    limb(c, hipx, hipy, kx, ky, 5.5 * bm, 4.3 * bm, sk); limb(c, kx, ky, ax, ay, 4.2 * bm, 3.0 * bm, sk);
+    limb(c, hipx, hipy, kx, ky, 5.5 * bm * tb, 4.3 * bm, sk); limb(c, kx, ky, ax, ay, 4.2 * bm, 3.0 * bm, sk);
     if (f.bottom === 'jeans' || f.bottom === 'chinos') {
-      limb(c, hipx, hipy, kx, ky, 6.1 * bm, 5.0 * bm, pc); limb(c, kx, ky, ax, ay, 4.9 * bm, 3.9 * bm, pc);
+      limb(c, hipx, hipy, kx, ky, 6.1 * bm * tb, 5.0 * bm, pc); limb(c, kx, ky, ax, ay, 4.9 * bm, 3.9 * bm, pc);
     } else if (f.bottom === 'shorts') {
-      limb(c, hipx, hipy, hipx + (kx - hipx) * 0.82, hipy + (ky - hipy) * 0.82, 6.2 * bm, 5.4 * bm, pc);
+      limb(c, hipx, hipy, hipx + (kx - hipx) * 0.82, hipy + (ky - hipy) * 0.82, 6.2 * bm * tb, 5.4 * bm, pc);
     }
     const fa = 0.5 - b * 0.5, tx = ax + Math.cos(fa) * 10, ty = ay + Math.sin(fa) * 10;
     limb(c, ax - 1.5, ay + 0.5, tx, ty, 3.5, 2.9, shade(f.shoes, k));
@@ -136,11 +149,11 @@ function drawChar(c, f, x, y, o = {}) {
   /* --- romp --- */
   const dB = 6.2 * bm, dF = 6.4 * bm;
   const torsoPath = () => {
-    c.beginPath(); c.moveTo(-dB * 0.95, 3);
-    c.bezierCurveTo(-dB * 1.1, -8, -dB * 1.1, -17, -dB * 0.9, -24);
+    c.beginPath(); c.moveTo(-dB * 0.95 - buttX, 3);
+    c.bezierCurveTo(-dB * 1.1 - buttX * 1.1, -6, -dB * 1.1 - humpX * 1.1, -17, -dB * 0.9 - humpX * 0.3, -24);
     c.lineTo(dB * 0.2, -25.5);
-    c.bezierCurveTo(dF * 1.05, -23, dF * (fem ? 1.28 : 1.12), -16, dF * (fem ? 0.82 : 1.0), -8);
-    c.bezierCurveTo(dF * (fem ? 0.72 : 0.95), -4, dF * 0.95, 0, dF * 1.0, 3); c.closePath();
+    c.bezierCurveTo(dF * 1.05, -23, dF * (fem ? 1.28 : 1.12) + chestX, -16, dF * (fem ? 0.82 : 1.0) + bellyX * 0.6, -8);
+    c.bezierCurveTo(dF * (fem ? 0.72 : 0.95) + bellyX, -4, dF * 0.95 + bellyX, 0, dF * 1.0 + bellyX * 0.3, 3); c.closePath();
   };
   const torso = () => {
     c.save(); c.translate(hipx, hipy); c.rotate(lean);
@@ -161,7 +174,7 @@ function drawChar(c, f, x, y, o = {}) {
     }
     if (f.top === 'tshirt' || f.top === 'long' || f.top === 'dress') { c.strokeStyle = shade(f.topColor, 0.7); c.lineWidth = 1.2; c.beginPath(); c.arc(dF * 0.25, -26, 3.8, 0.1, Math.PI * 0.85); c.stroke(); }
     if ((f.bottom === 'jeans' || f.bottom === 'chinos') && f.top !== 'dress') { // riem
-      c.fillStyle = '#2a1a10'; c.fillRect(-9, -0.5, 20, 3); ell(c, dF * 0.8, 1, 1.5, 1.2, '#c9a227');
+      c.fillStyle = '#2a1a10'; c.fillRect(-dB - buttX, -0.5, dB + dF + buttX + bellyX * 0.3, 3); ell(c, dF * 0.8 + bellyX * 0.3, 1, 1.5, 1.2, '#c9a227');
     }
     c.restore();
     c.restore();
@@ -171,8 +184,9 @@ function drawChar(c, f, x, y, o = {}) {
     const col = f.top === 'dress' ? f.topColor : f.bottomColor, sw = Math.sin(ph) * 1.5;
     c.save(); c.translate(hipx, hipy); c.rotate(lean * 0.5);
     const g = c.createLinearGradient(-dB, 0, dF + 8, 0); g.addColorStop(0, shade(col, 0.8)); g.addColorStop(1, shade(col, 1.1));
-    c.fillStyle = g; c.beginPath(); c.moveTo(-dB * 1.0, -3); c.lineTo(dF * 1.0, -3);
-    c.quadraticCurveTo(dF + 7, 8, dF + 10 + sw, 19); c.quadraticCurveTo(0, 22, -dB - 9 + sw, 19); c.quadraticCurveTo(-dB - 5, 8, -dB * 1.0, -3); c.closePath(); c.fill();
+    const bb = dB + buttX * 0.9, ff = dF + bellyX * 0.5;
+    c.fillStyle = g; c.beginPath(); c.moveTo(-bb, -3); c.lineTo(ff, -3);
+    c.quadraticCurveTo(ff + 7, 8, ff + 10 + sw, 19); c.quadraticCurveTo(0, 22, -bb - 9 + sw, 19); c.quadraticCurveTo(-bb - 5, 8, -bb, -3); c.closePath(); c.fill();
     c.restore();
   };
   /* --- hoofd (lokale coördinaten, kijkt naar +x) --- */

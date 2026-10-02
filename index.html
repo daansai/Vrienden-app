@@ -4,37 +4,48 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>Vrienden Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;700;800&display=swap">
+<meta name="theme-color" content="#1b1020">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="wrap">
   <canvas id="game" width="800" height="450"></canvas>
   <div id="over" class="panel hidden">
-    <h1 id="overTitle">Flauwgevallen!</h1>
-    <p id="overScore"></p>
-    <p id="overDrink" class="drink"></p>
-    <div class="row">
-      <button id="btnAgain" class="big">Opnieuw spelen</button>
-      <button id="btnHome">Hoofdmenu</button>
+    <div class="card-over">
+      <h1 id="overTitle">Flauwgevallen!</h1>
+      <p id="overScore"></p>
+      <p id="overDrink" class="drink"></p>
+      <div class="row">
+        <button id="btnAgain" class="big">Opnieuw spelen</button>
+        <button id="btnHome">Hoofdmenu</button>
+      </div>
     </div>
   </div>
 </div>
 
 <div id="menu" class="panel full">
-  <h1>Vrienden Run</h1>
-  <p>Drink je glas leeg en ren door het café!</p>
-  <div class="row" id="modes">
-    <button class="mode" data-mode="1"><b>Spel 1: Bier</b><br>Pak groene bierflesjes, je pint wordt leger<br><small>sneller tempo</small></button>
-    <button class="mode" data-mode="2"><b>Spel 2: Wijn</b><br>Pak wijnglazen, je wijnglas wordt leger<br><small>rustiger tempo</small></button>
-  </div>
-  <p class="hint">Een shotje vult je glas weer een beetje bij. Is je glas leeg, dan win je. Raak je iets anders, dan val je flauw.</p>
-  <div id="roster"></div>
-  <div class="row">
-    <button id="btnPlay" class="big">Spelen</button>
-    <button id="btnNew">+ Nieuwe vriend</button>
-  </div>
-  <p class="hint">Springen: ↑ / spatie / rechterkant &nbsp; Bukken: ↓ / linkerkant &nbsp; Tip: draai je telefoon op zijn kant.</p>
-  <p id="best"></p>
+  <header class="hero">
+    <h1 class="logo">Vrienden Run</h1>
+    <p class="tag">Drink je glas leeg en ren door het café</p>
+  </header>
+  <section class="step">
+    <h3>Kies je spel</h3>
+    <div class="row" id="modes">
+      <button class="mode" data-mode="1"><span class="mi">🍺</span><b>Spel 1: Bier</b><span>Pak groene bierflesjes, je pint wordt leger</span></button>
+      <button class="mode" data-mode="2"><span class="mi">🍷</span><b>Spel 2: Wijn</b><span>Pak wijnglazen, je glas gaat sneller leeg</span></button>
+    </div>
+  </section>
+  <section class="step">
+    <h3>Kies je vriend</h3>
+    <div id="roster"></div>
+    <button id="btnNew" class="ghost">+ Nieuwe vriend maken</button>
+  </section>
+  <button id="btnPlay" class="big cta">Spelen</button>
+  <p class="hint">Een shotje vult je glas weer bij. Is je glas leeg, dan win je. Raak je iets anders, dan val je flauw en moet je opdrinken wat er nog in zit.</p>
+  <p class="hint">Springen: ↑ / spatie / rechterkant &nbsp;·&nbsp; Bukken: ↓ / linkerkant &nbsp;·&nbsp; Tip: draai je telefoon op zijn kant</p>
+  <p id="best" class="best"></p>
 </div>
 
 <div id="editor" class="panel full hidden">
