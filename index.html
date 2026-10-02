@@ -36,27 +36,31 @@
 </div>
 
 <div id="menu" class="panel full">
-  <header class="hero">
-    <h1 class="logo">Vrienden Run</h1>
-    <p class="tag">Drink je glas leeg en ren door het café</p>
-  </header>
-  <section class="step">
-    <h3>Wie doen er mee?</h3>
-    <p class="hint">Maak voor iedereen een eigen poppetje, kies of die bier of wijn drinkt en tik op wie er meedoen. Ze spelen om de beurt.</p>
-    <div id="roster"></div>
-    <button id="btnNew" class="ghost">+ Nieuwe speler maken</button>
-  </section>
-  <section class="step">
-    <h3>Moeilijkheid</h3>
-    <div class="chips" id="diffs"><button class="chip" data-diff="easy">Makkelijk</button><button class="chip" data-diff="normal">Normaal</button><button class="chip" data-diff="hard">Moeilijk</button></div>
-    <p class="hint" id="diffHint"></p>
-  </section>
-  <button id="btnPlay" class="big cta">Spelen</button>
-  <p class="hint">Bier: groene flesjes, wijn: wijnglazen, cocktail: cocktailglazen (loopt het langzaamst leeg). Een shotje vult je glas weer bij. Is je glas leeg, dan win je. Haal je de 3000 meter of val je flauw, dan moet je opdrinken wat er nog in zit. Pak je een gouden drankje, dan mag je aan het einde slokken uitdelen.</p>
-  <p class="hint">Springen: ↑ / spatie / rechterkant &nbsp;·&nbsp; Bukken: ↓ / linkerkant &nbsp;·&nbsp; Tip: draai je telefoon op zijn kant</p>
-  <button id="btnInstall" class="ghost" hidden>📲 Installeer als app</button>
-  <p id="installHint" class="hint" hidden>iPhone: tik op <b>Deel</b> en kies <b>Zet op beginscherm</b> om de app te installeren.</p>
-  <p id="best" class="best"></p>
+  <div class="menu-left">
+    <header class="hero">
+      <h1 class="logo">Vrienden Run</h1>
+      <p class="tag">Drink je glas leeg en ren door het café</p>
+    </header>
+    <button id="btnPlay" class="big cta">Spelen</button>
+    <p class="hint rules">Bier: groene flesjes, wijn: wijnglazen, cocktail: cocktailglazen (loopt het langzaamst leeg). Een shotje vult je glas weer bij. Is je glas leeg, dan win je. Haal je de 3000 meter of val je flauw, dan moet je opdrinken wat er nog in zit. Pak je een gouden drankje, dan mag je aan het einde slokken uitdelen.</p>
+    <p class="hint ctrl">Springen: ↑ / spatie / rechterkant &nbsp;·&nbsp; Bukken: ↓ / linkerkant</p>
+    <button id="btnInstall" class="ghost" hidden>📲 Installeer als app</button>
+    <p id="installHint" class="hint" hidden>iPhone: tik op <b>Deel</b> en kies <b>Zet op beginscherm</b> om de app te installeren.</p>
+    <p id="best" class="best"></p>
+  </div>
+  <div class="menu-right">
+    <section class="step" id="stepRoster">
+      <h3>Wie doen er mee?</h3>
+      <p class="hint">Maak voor iedereen een eigen poppetje, kies of die bier of wijn drinkt en tik op wie er meedoen. Ze spelen om de beurt.</p>
+      <div id="roster"></div>
+      <button id="btnNew" class="ghost">+ Nieuwe speler maken</button>
+    </section>
+    <section class="step" id="stepDiff">
+      <h3>Moeilijkheid</h3>
+      <div class="chips" id="diffs"><button class="chip" data-diff="easy">Makkelijk</button><button class="chip" data-diff="normal">Normaal</button><button class="chip" data-diff="hard">Moeilijk</button></div>
+      <p class="hint" id="diffHint"></p>
+    </section>
+  </div>
 </div>
 
 <div id="editor" class="panel full hidden">

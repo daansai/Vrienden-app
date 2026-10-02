@@ -109,3 +109,48 @@ input[type=range]{width:100%;accent-color:#ffc933}
 @media (prefers-reduced-motion:reduce){#rotate span{animation:none}}
 html,body{overscroll-behavior:none}
 body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+
+/* --- hoofdmenu: gewone schermen --- */
+.menu-left,.menu-right{display:contents}
+#menu .hero{order:1;margin-top:auto}
+#menu #stepRoster{order:2}
+#menu #stepDiff{order:3}
+#menu #btnPlay{order:4}
+#menu .hint.rules{order:5}
+#menu .hint.ctrl{order:6}
+#menu #btnInstall{order:7}
+#menu #installHint{order:8}
+#menu #best{order:9;margin-bottom:auto}
+#menu>:first-child,#menu>:last-child{margin:0}
+
+/* --- hoofdmenu: telefoon liggend, past zonder scrollen --- */
+@media (max-height:540px) and (orientation:landscape){
+  #menu{flex-direction:row;align-items:center;justify-content:center;gap:12px 26px;padding:6px 14px;overflow:hidden}
+  .menu-left,.menu-right{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .menu-left{flex:0 1 36%;min-width:0}
+  .menu-right{flex:1 1 58%;min-width:0;gap:8px}
+  #menu .hero{margin:0}
+  #menu #best{margin:0}
+  .logo{font-size:clamp(26px,9vh,42px)}
+  .tag{font-size:12px}
+  .cta{font-size:1.05em;padding:8px 26px;margin:0}
+  .hint.rules,.step>.hint,#diffHint{display:none}
+  .hint.ctrl{font-size:11px}
+  .best{font-size:12px}
+  .step{gap:4px}
+  .step h3{font-size:10px}
+  #roster{flex-wrap:nowrap;overflow-x:auto;max-width:100%;padding:10px 8px 2px;gap:6px}
+  .card{flex:0 0 auto;padding:3px 6px 2px;font-size:11px}
+  .card canvas{height:min(84px,24vh);width:auto}
+  .card .num{top:-7px;left:-7px;min-width:20px;height:20px;font-size:12px}
+  #btnNew{padding:5px 10px;font-size:12px}
+  #diffs{gap:5px}
+  .chip{padding:5px 10px;font-size:12px}
+  #btnInstall{padding:5px 10px;font-size:12px}
+}
+/* hoofdmenu: telefoon staand */
+@media (orientation:portrait) and (max-width:760px){
+  .hint.rules,.step>.hint{display:none}
+  .card canvas{height:92px;width:auto}
+  .logo{font-size:clamp(30px,11vw,48px)}
+}
