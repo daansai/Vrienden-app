@@ -1496,5 +1496,13 @@ const release = e => {
 };
 cv.addEventListener('pointerup', release); cv.addEventListener('pointercancel', release);
 
+/* ---------- installeren als app ---------- */
+let deferredInstall = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; $('btnInstall').hidden = false; });
+$('btnInstall').onclick = async () => { if (!deferredInstall) return; deferredInstall.prompt(); try { await deferredInstall.userChoice; } catch (e) {} deferredInstall = null; $('btnInstall').hidden = true; };
+addEventListener('appinstalled', () => { $('btnInstall').hidden = true; });
+const standalone = (window.matchMedia && matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) || navigator.standalone;
+if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone && !window.Capacitor && !window.claude) $('installHint').hidden = false;
+
 renderRoster();
 requestAnimationFrame(loop);

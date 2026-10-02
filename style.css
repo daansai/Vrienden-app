@@ -100,3 +100,12 @@ input[type=range]{width:100%;accent-color:#ffc933}
 .sips{font-size:clamp(15px,3vw,22px);font-weight:800;color:#2a1608;background:linear-gradient(#ffe27a,#e0a02a);padding:6px 14px;border-radius:12px;box-shadow:0 2px 0 #8a5a00}
 .sips:empty{display:none}
 #diffs{justify-content:center}
+
+/* --- als app op de telefoon --- */
+#rotate{display:none;position:fixed;inset:0;z-index:4;background:#150c10;color:#ffe9b8;align-items:center;justify-content:center;text-align:center;font-size:18px;padding:24px}
+#rotate span{font-size:64px;display:block;animation:turn 2.4s ease-in-out infinite}
+@keyframes turn{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait) and (max-width:760px){#rotate{display:flex}}
+@media (prefers-reduced-motion:reduce){#rotate span{animation:none}}
+html,body{overscroll-behavior:none}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}

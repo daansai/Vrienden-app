@@ -1,21 +1,38 @@
 # Vrienden Run
-Een renspel door een bruin café, in de stijl van Kaasje / de Chrome dino-game. Spring en buk om obstakels te ontwijken en maak je vrienden na als poppetjes.
+Een renspel door een bruin café, in de stijl van Kaasje / de Chrome dino-game. Spring en buk om obstakels te ontwijken en maak je vrienden na als poppetjes (met eigen gezichtsfoto).
 
-- **Bier, wijn of cocktail:** elk poppetje kiest in de maker wat het drinkt. Cocktail rent even hard als bier, maar het glas loopt veel langzamer leeg. Bier: pak groene flesjes, je bierglas links in beeld wordt leger. Wijn: pak wijnglazen, je wijnglas gaat sneller leeg (sterkere drank), een shotje vult er maar weinig van bij.
-- **3000 meter:** elk spel stopt bij de finish. Is je glas dan nog niet leeg, dan moet je opdrinken wat er nog in zit.
-- **Shotjes** die voorbij komen vullen je glas weer een beetje bij. Easteregg: elk derde shotje vult het hele glas.
-- **Glas leeg = gewonnen.** Raak je een obstakel, dan val je flauw en moet je opdrinken wat er nog in je glas zit.
-- **Moeilijkheid:** makkelijk, normaal of moeilijk (tempo, ruimte tussen obstakels, hoe snel je glas leegloopt en hoe vaak achtervolgers komen).
-- **Gouden drankje:** af en toe vliegt er een gouden drankje sneller voorbij. Elke pakt telt als één slok die je aan het einde van je run mag uitdelen.
-- **Achterdeur naar een veld:** af en toe staat er een deur met zonlicht: rennen erdoor brengt je 250 meter naar een tarweveld (bier), druivenveld (wijn) of fruitplantage (cocktail), met eigen strobalen, druivenkratten, fruitmanden, picknicktafels en hangende schoven, trossen of sinaasappels.
-- **Meerdere spelers:** maak voor iedereen een eigen poppetje, tik op wie er meedoen en speel om de beurt. Na de laatste speler zie je wie het meest moet drinken.
-- **Open vat:** af en toe staat er een open wijnvat (wijndrinkers) of biervat (bierdrinkers). Cocktaildrinkers krijgen een reuzecocktail. Spring er van boven in en je komt 250 meter lang in een wijnkelder, brouwerij of cocktailbar. Bukken in de lucht laat je meteen naar beneden gaan. Tegen de zijkant aan lopen is gevaarlijk.
-- **Per omgeving andere obstakels:** de tafels, lampen, kratten, vaten, scherven en paaltjes zien er in elke omgeving anders uit (café, dansvloer, wijnkelder, brouwerij, cocktailbar).
-- **Achtervolgers:** een beveiliger, een boze vrouw met een deegroller, een heel dikke man in zijn onderbroek, een vader en een moeder met een handtas ('Je zou vanavond niet dronken worden!') rennen om de beurt achter je aan en roepen iets anders bij bier, wijn of cocktail. Ze ontwijken eerst 2 tot 5 obstakels voordat ze struikelen.
-- **Omgeving:** lange tafels waar je op kunt springen (met flesjes erop), verkeerspaaltjes om overheen te springen,  elke 150 m een dansvloer met discobal.
-- **Poppetjes-maker:** tabs met grote keuzeknoppen, kleurstaaltjes met eigen kleur en een 🎲-knop voor een willekeurig poppetje. Echte stoffen: denim met stiksels en omgeslagen pijpen, jersey, tricot, fleece, wol en katoen.
-- **Eerder:** man/vrouw, lengte, postuur, houding, bochel, borst, buik, billen, huid, ogen, kapsel, baard, bril, kleding, schoenen, hoofddeksel en een foto van je eigen gezicht (blijft alleen op je apparaat).
+## Op je telefoon spelen
 
-Open `index.html` in een browser (of serveer de map, bijv. `python3 -m http.server`).
+### Android (app downloaden)
+1. Open op je telefoon de pagina **Releases** van deze repository en download **Vrienden-Run.apk** van de nieuwste release.
+   Directe link: `https://github.com/daansai/Vrienden-app/releases/latest/download/Vrienden-Run.apk`
+2. Open het bestand. Android vraagt eenmalig om het installeren van onbekende apps toe te staan voor je browser of bestanden-app.
+3. Open **Vrienden Run** en draai je telefoon op zijn kant.
 
-Besturing: ↑ / spatie = springen, ↓ = bukken, Esc = hoofdmenu. Touchscreen: rechter helft = springen, linker helft = bukken.
+De APK wordt automatisch gebouwd door GitHub (workflow *Android-app (APK)*) bij elke wijziging op de hoofdbranch. Je kunt hem ook handmatig starten via **Actions → Android-app (APK) → Run workflow**.
+
+### iPhone en Android (webapp, geen download nodig)
+1. Zet eenmalig GitHub Pages aan: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+2. Open daarna `https://daansai.github.io/Vrienden-app/` op je telefoon.
+3. **Android (Chrome):** menu ⋮ → *App installeren* (of de knop "Installeer als app" in het menu).
+   **iPhone (Safari):** tik op *Deel* → *Zet op beginscherm*.
+De webapp werkt daarna ook zonder internet.
+
+## Het spel
+- **Bier, wijn of cocktail:** elk poppetje kiest wat het drinkt. Bier: groene flesjes. Wijn: wijnglazen, het glas loopt sneller leeg en een shotje vult er weinig van bij. Cocktail: loopt het langzaamst leeg.
+- **Shotjes** vullen je glas weer een beetje bij (elk derde shotje vult het hele glas) en maken je wazig en wankelig.
+- **Glas leeg = gewonnen.** Haal je de **3000 meter** of val je flauw, dan moet je opdrinken wat er nog in je glas zit.
+- **Gouden drankje:** vliegt af en toe sneller voorbij. Elke pak telt als één slok om aan het einde uit te delen.
+- **Moeilijkheid:** makkelijk, normaal of moeilijk.
+- **Meerdere spelers:** maak voor iedereen een eigen poppetje en speel om de beurt. Na de laatste speler zie je wie het meest moet drinken.
+- **Bonuswerelden (250 meter):** spring in het open vat (kelder, brouwerij of cocktailbar) of ren door de achterdeur (tarweveld, druivenveld of fruitplantage). Elke omgeving heeft eigen tafels, lampen, kratten en meer.
+- **Afwisseling:** dansvloer met discobal elke 150 m, lange tafels om op te springen, verkeerspaaltjes.
+- **Achtervolgers:** beveiliger, boze vrouw, dikke man in onderbroek, vader en moeder ("Je zou vanavond niet dronken worden!"). Ze ontwijken eerst een paar obstakels voordat ze struikelen.
+- **Poppetjes-maker:** tabs met keuzeknoppen en een 🎲-knop. Man/vrouw, lengte, postuur, houding, bochel, borst, buik, billen, huid, ogen, kapsel, baard, bril, kleding met echte stoffen (denim, jersey, tricot, fleece, wol), schoenen, hoofddeksel en een foto van je eigen gezicht (blijft alleen op je apparaat).
+
+## Besturing
+↑ / spatie = springen, ↓ = bukken, Esc = hoofdmenu. Touchscreen: rechter helft = springen, linker helft = bukken. In de lucht bukken laat je meteen naar beneden gaan.
+
+## Zelf bouwen
+- Webversie: open `index.html` in een browser of serveer de map (`python3 -m http.server`).
+- `node scripts/build-www.js` zet de app in `www/`; de Android-app wordt daarmee met Capacitor gebouwd (zie `.github/workflows/android.yml`).

@@ -1,0 +1,7 @@
+{
+  "appId": "nl.vriendenrun.app",
+  "appName": "Vrienden Run",
+  "webDir": "www",
+  "backgroundColor": "#1b1020",
+  "server": { "androidScheme": "https" }
+}
