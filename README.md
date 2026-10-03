@@ -24,7 +24,7 @@ De webapp werkt daarna ook zonder internet.
 - **Bier, wijn of cocktail:** elk poppetje kiest wat het drinkt. Bier: groene flesjes. Wijn: wijnglazen, het glas loopt sneller leeg en een shotje vult er weinig van bij. Cocktail: loopt het langzaamst leeg.
 - **Shotjes** vullen je glas weer een beetje bij (elk derde shotje vult het hele glas) en maken je wazig en wankelig.
 - **Glas leeg = gewonnen.** Haal je de **3000 meter** of val je flauw, dan moet je opdrinken wat er nog in je glas zit.
-- **Gouden drankje:** vliegt af en toe sneller voorbij. Elke pak telt als één slok om aan het einde uit te delen.
+- **Gouden drankje:** vliegt vaak sneller voorbij (ongeveer elke 6 tot 11 seconden). Elke pak telt als één slok om aan het einde uit te delen.
 - **Moeilijkheid:** makkelijk, normaal of moeilijk.
 - **Meerdere spelers:** maak voor iedereen een eigen poppetje en speel om de beurt. Na de laatste speler zie je wie het meest moet drinken.
 - **Bonuswerelden (250 meter):** spring in het open vat (kelder, brouwerij of cocktailbar) of ren door de achterdeur (tarweveld, druivenveld of fruitplantage). Elke omgeving heeft eigen tafels, lampen, kratten en meer.

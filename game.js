@@ -7,6 +7,9 @@
 const W = 800, H = 450, GROUND = 340;
 const $ = id => document.getElementById(id);
 const cv = $('game'), ctx = cv.getContext('2d');
+// Op telefoons is 100vh hoger dan het zichtbare scherm; daarom meten we de echte hoogte en gebruiken die in de CSS
+function setAppH() { document.documentElement.style.setProperty('--app-h', innerHeight + 'px'); }
+setAppH(); addEventListener('resize', setAppH); addEventListener('orientationchange', () => setTimeout(setAppH, 150));
 
 /* ---------- opslag ---------- */
 const store = {
@@ -289,11 +292,20 @@ function initRun(f) {
   obstacles = []; items = []; popups = []; confetti = []; dust = [];
   speed = MODES[mode].base * D().speed; score = 0; itemCount = 0; spawnIn = 1; time = 0; phase = 0; faintT = 0; wonT = 0;
   level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; shake = 0; wasAir = false; nextMile = 100;
-  drunk = 0; bonus = null; bonusBlend = 0; flash = 0; nextVatAt = rnd(150, 300); nextDoorAt = rnd(300, 450); shotCount = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28) * D().chase; goldIn = rnd(8, 14) * D().gold; sips = 0; zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
+  drunk = 0; bonus = null; bonusBlend = 0; flash = 0; nextVatAt = rnd(150, 300); nextDoorAt = rnd(300, 450); shotCount = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28) * D().chase; goldIn = rnd(3, 6) * D().gold; sips = 0; zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
 }
+// Past de uitslagkaart (na verliezen of winnen) altijd in beeld, zodat je de knoppen kunt bereiken
+function fitOver() {
+  const o = $('over'), card = o.querySelector('.card-over'); if (!card || o.classList.contains('hidden')) return;
+  card.style.zoom = '1';
+  const cs = getComputedStyle(o);
+  const availH = o.clientHeight - parseFloat(cs.paddingTop) - 8, availW = o.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  card.style.zoom = String(Math.max(0.4, Math.min(1, availH / card.offsetHeight, availW / card.offsetWidth) * 0.97));
+}
+addEventListener('resize', fitOver);
 function setOver(o) {
   $('overTitle').textContent = o.title; $('overScore').textContent = o.text || ''; $('overDrink').textContent = o.drink || ''; $('overSips').textContent = o.sips || '';
-  $('overBoard').innerHTML = o.board || ''; $('btnAgain').textContent = o.label; primary = o.fn; $('over').classList.remove('hidden');
+  $('overBoard').innerHTML = o.board || ''; $('btnAgain').textContent = o.label; primary = o.fn; $('over').classList.remove('hidden'); fitOver();
 }
 function startSession() {
   $('menu').classList.add('hidden'); $('editor').classList.add('hidden');
@@ -499,7 +511,7 @@ function update(dt) {
     }
   }
   goldIn -= dt;
-  if (goldIn <= 0 && score < FINISH - 80) { items.push({ type: 'gold', x: W + 50, by: GROUND - rnd(55, 150), y: GROUND - 90, p: rnd(0, 6), got: false }); goldIn = rnd(14, 24) * D().gold; }
+  if (goldIn <= 0 && score < FINISH - 80) { items.push({ type: 'gold', x: W + 50, by: GROUND - rnd(55, 150), y: GROUND - 90, p: rnd(0, 6), got: false }); goldIn = rnd(6, 11) * D().gold; }
   stepPhysics(dt, input.duck);
   const air = !player.on;
   if (wasAir && !air) for (let i = 0; i < 7; i++) dust.push({ x: player.x - 6, y: player.y - 2, vx: rnd(-90, 60), vy: rnd(-40, -5), t: 0, r: rnd(2, 4) });
@@ -611,12 +623,13 @@ function drawWine(x, y, w, h, lv) { // wijnglas, lv = vulling 0..1
 function drawShot(x, y, k = 1) { // shotglaasje
   ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
   const gl = 0.5 + 0.5 * Math.sin(time * 5 + x * 0.02);
-  const g = ctx.createRadialGradient(0, 0, 3, 0, 0, 22); g.addColorStop(0, `rgba(255,240,150,${0.35 + gl * 0.2})`); g.addColorStop(1, 'rgba(255,240,150,0)');
-  ctx.fillStyle = g; ctx.fillRect(-24, -24, 48, 48);
+  const g = ctx.createRadialGradient(0, 0, 3, 0, 0, 30); g.addColorStop(0, `rgba(255,40,30,${0.5 + gl * 0.3})`); g.addColorStop(0.6, `rgba(190,10,20,${0.18 + gl * 0.12})`); g.addColorStop(1, 'rgba(190,10,20,0)'); // rode gloed: dit shotje is slecht
+  ctx.fillStyle = g; ctx.fillRect(-32, -32, 64, 64);
+  ctx.strokeStyle = `rgba(255,70,50,${0.25 + gl * 0.35})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(0, 0, 17 + gl * 3, 0, 7); ctx.stroke();
   const body = () => { ctx.beginPath(); ctx.moveTo(-6.5, -9); ctx.lineTo(6.5, -9); ctx.lineTo(5, 9); ctx.lineTo(-5, 9); ctx.closePath(); };
   body(); ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fill();
-  ctx.save(); body(); ctx.clip(); ctx.fillStyle = '#e8a317'; ctx.fillRect(-8, -4, 16, 16); ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillRect(-8, -4, 16, 1.5); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(-4.5, 6, 9, 3.5); ctx.restore();
-  body(); ctx.strokeStyle = 'rgba(240,248,255,.9)'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.save(); body(); ctx.clip(); const lq = ctx.createLinearGradient(0, -4, 0, 9); lq.addColorStop(0, '#ff3b2a'); lq.addColorStop(1, '#8a0a12'); ctx.fillStyle = lq; ctx.fillRect(-8, -4, 16, 16); ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillRect(-8, -4, 16, 1.5); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(-4.5, 6, 9, 3.5); ctx.restore();
+  body(); ctx.strokeStyle = 'rgba(255,225,220,.95)'; ctx.lineWidth = 1.6; ctx.stroke();
   ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(-4, -7); ctx.lineTo(-3.4, 3); ctx.stroke();
   ctx.restore();
 }
@@ -1409,14 +1422,22 @@ function drawHUD() {
   drawGlassHUD();
 }
 const buttons = [{ key: 'duck', x: 20, y: H - 84, w: 70, h: 64 }, { key: 'jump', x: W - 90, y: H - 84, w: 70, h: 64 }];
-function drawButtons() {
+function drawButtons() { // minimalistische bierviltjes met een pijl, kleur volgt je drankje
+  const acc = { 1: ['#d4a017', '#5a3a08'], 2: ['#9a2a4a', '#4a0f22'], 3: ['#e0558f', '#6a1a3a'] }[mode] || ['#d4a017', '#5a3a08'];
   for (const b of buttons) {
-    ctx.fillStyle = (b.key === 'duck' ? input.duck : jumpHeld) ? '#7ed957' : '#5cc437';
-    ctx.globalAlpha = 0.8; ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 16); ctx.fill(); ctx.globalAlpha = 1;
-    ctx.fillStyle = '#fff'; ctx.beginPath();
-    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, d = b.key === 'jump' ? -1 : 1;
-    ctx.moveTo(cx, cy + d * 16); ctx.lineTo(cx - 18, cy - d * 4); ctx.lineTo(cx - 8, cy - d * 4); ctx.lineTo(cx - 8, cy - d * 16);
-    ctx.lineTo(cx + 8, cy - d * 16); ctx.lineTo(cx + 8, cy - d * 4); ctx.lineTo(cx + 18, cy - d * 4); ctx.closePath(); ctx.fill();
+    const on = b.key === 'duck' ? input.duck : (jumpHeld || keyJump), up = b.key === 'jump';
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = 33 * (on ? 0.92 : 1);
+    ctx.save(); ctx.globalAlpha = on ? 0.96 : 0.8;
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.arc(cx + 1, cy + 3, r, 0, 7); ctx.fill();
+    const g = ctx.createRadialGradient(cx - 8, cy - 10, 4, cx, cy, r); g.addColorStop(0, on ? '#ffe3a0' : '#f8ecd0'); g.addColorStop(1, on ? '#e8b04a' : '#d8c08e');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+    ctx.strokeStyle = acc[0]; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, r - 1.5, 0, 7); ctx.stroke();
+    ctx.setLineDash([2, 5]); ctx.strokeStyle = 'rgba(90,58,30,.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, r - 7, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = acc[1]; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+    if (up) { ctx.moveTo(cx - 12, cy + 2); ctx.lineTo(cx, cy - 8); ctx.lineTo(cx + 12, cy + 2); } else { ctx.moveTo(cx - 12, cy - 8); ctx.lineTo(cx, cy + 2); ctx.lineTo(cx + 12, cy - 8); }
+    ctx.stroke();
+    ctx.fillStyle = acc[1]; ctx.globalAlpha *= 0.85; ctx.font = '800 9px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(up ? 'SPRING' : 'BUK', cx, cy + 16);
+    ctx.restore();
   }
 }
 function drawStars(cx, cy, t) {

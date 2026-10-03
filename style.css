@@ -1,8 +1,8 @@
 *{box-sizing:border-box;touch-action:manipulation;-webkit-user-select:none;user-select:none}
 input,select{-webkit-user-select:auto;user-select:auto}
-html,body{margin:0;height:100%;background:#1b1020;font-family:Nunito,system-ui,sans-serif;color:#fff}
+html,body{margin:0;height:var(--app-h,100%);background:#1b1020;font-family:Nunito,system-ui,sans-serif;color:#fff}
 .hidden{display:none!important}
-#wrap{position:relative;width:min(100vw,calc(100vh*16/9));aspect-ratio:16/9;margin:0 auto;top:50%;transform:translateY(-50%);border:4px solid #f5a300;border-radius:8px;overflow:hidden;background:#000}
+#wrap{position:relative;width:min(100vw,calc(var(--app-h,100vh)*16/9));aspect-ratio:16/9;margin:0 auto;top:50%;transform:translateY(-50%);border:4px solid #f5a300;border-radius:8px;overflow:hidden;background:#000}
 #game{width:100%;height:100%;display:block}
 .panel{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px;text-align:center}
 .panel.full{position:fixed;inset:0;z-index:5;overflow-y:auto;background:radial-gradient(ellipse at 50% 30%,#4a2c1a,#150c10)}
@@ -158,3 +158,12 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 
 /* menu-doos: schaalt zichzelf (zie fitMenu) */
 #menuBox{display:flex;flex-direction:column;align-items:center;gap:10px;margin:auto;max-width:100%}
+
+/* schermen op echte schermhoogte, uitslagkaart compact op lage schermen */
+.panel.full{bottom:auto;height:var(--app-h,100%)}
+@media (max-height:520px){
+  #over{padding-top:8px;gap:4px}
+  .card-over{padding:8px 14px;gap:5px}
+  .card-over h1{font-size:28px}
+  .drink,.sips{padding:4px 10px}
+}
