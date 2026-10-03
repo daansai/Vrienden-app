@@ -260,29 +260,29 @@ function hairCap(c, H, o) {
 }
 function hairFront(c, f, H) {
   const st = f.style, hair = f.hair, hairD = shade(hair, 0.7); if (st === 'bald') return;
-  const grad = oHair(c, hair, H - 48, H + 4), cap = (o) => () => hairCap(c, H, o), hl = () => { c.strokeStyle = 'rgba(255,255,255,.38)'; c.lineWidth = 3; c.beginPath(); c.arc(-4, H - 4, 26, Math.PI * 1.18, Math.PI * 1.45); c.stroke(); };
+  const grad = oHair(c, hair, H - 48, H + 4), cap = (o) => () => hairCap(c, H, o), hl = (clipFn) => { c.save(); if (clipFn) { c.beginPath(); clipFn(); c.clip(); } c.strokeStyle = 'rgba(255,255,255,.38)'; c.lineWidth = 3; c.beginPath(); c.arc(-4, H - 4, 26, Math.PI * 1.18, Math.PI * 1.45); c.stroke(); c.restore(); };
   const root = (x, y) => hairFan(x, y, 0, H, 31, 33, Math.PI * 0.96, Math.PI * 2.04, 17, 0.1);
   if (st === 'mohawk') {
-    const sides = cap({ vol: -10, side: 2, fringe: 'back' }); c.beginPath(); sides(); c.globalAlpha = 0.45; c.fillStyle = hair; c.fill(); c.globalAlpha = 1; hairDots(c, hair, sides, 0, H - 16, 28, 16, 70, 0.7);
+    const sides = cap({ vol: -10, side: 2, fringe: 'back' }); c.beginPath(); sides(); c.fillStyle = shade(hair, 0.82); c.fill(); c.strokeStyle = OUT; c.lineWidth = 2.2; c.stroke(); hairDots(c, hair, sides, 0, H - 16, 28, 16, 70, 0.7);
     const sp = () => { c.beginPath(); c.moveTo(-9, H - 20); c.lineTo(-11, H - 40); c.lineTo(-5, H - 33); c.lineTo(-3, H - 50); c.lineTo(1, H - 36); c.lineTo(5, H - 52); c.lineTo(8, H - 35); c.lineTo(12, H - 44); c.lineTo(10, H - 20); c.closePath(); };
     sp(); oFill(c, grad, 2.6); hairStrands(c, hair, sp, hairFlow(-9, 9, H - 52, H - 20, 9, 1.2)); sp(); c.strokeStyle = OUT; c.lineWidth = 2.6; c.stroke(); return;
   }
   if (st === 'afro') {
     const sh0 = cap({ vol: 12, side: 0, fringe: 'back' }); c.beginPath(); sh0(); oFill(c, grad, 2.6);
     c.save(); c.beginPath(); sh0(); c.clip(); c.strokeStyle = shade(hair, 0.55); c.globalAlpha = 0.4; c.lineWidth = 1.3;
-    for (let i = 0; i < 22; i++) { const x = -26 + (i % 7) * 8.7, y = H - 40 + Math.floor(i / 7) * 9; c.beginPath(); c.arc(x, y, 3.4, 0.4, 5.3); c.stroke(); } c.restore(); hl(); return;
+    for (let i = 0; i < 22; i++) { const x = -26 + (i % 7) * 8.7, y = H - 40 + Math.floor(i / 7) * 9; c.beginPath(); c.arc(x, y, 3.4, 0.4, 5.3); c.stroke(); } c.restore(); hl(sh0); return;
   }
   const o = { buzz: { vol: -6, side: 4, fringe: 'back' }, short: { vol: 2, side: 5, fringe: 'side' }, quiff: { vol: 0, side: 5, fringe: 'back' }, curly: { vol: 3, side: 3, fringe: 'center' },
     long: { vol: 2, side: 2, fringe: 'center' }, bob: { vol: 3, side: 2, fringe: 'bangs' }, ponytail: { vol: 0, side: 2, fringe: 'back' }, bun: { vol: 0, side: 2, fringe: 'back' }, braid: { vol: 1, side: 2, fringe: 'center' } }[st] || { vol: 0, fringe: 'side' };
   const shape = cap(o);
   if (st === 'bun') { const bun = () => { c.beginPath(); c.arc(0, H - 40, 12, 0, 7); }; bun(); oFill(c, oHair(c, hair, H - 54, H - 28), 2.6); hairStrands(c, hair, bun, hairFan(0, H - 40, 0, H - 40, 12, 12, 0, 6.2, 9, 0.5)); bun(); c.strokeStyle = OUT; c.lineWidth = 2.6; c.stroke(); }
   c.beginPath(); shape();
-  if (st === 'buzz') { c.globalAlpha = 0.5; c.fillStyle = hair; c.fill(); c.globalAlpha = 1; hairDots(c, hair, shape, 0, H - 16, 28, 18, 110, 0.75); c.strokeStyle = 'rgba(58,34,22,.55)'; c.lineWidth = 1.6; c.stroke(); hl(); return; }
+  if (st === 'buzz') { c.fillStyle = shade(hair, 0.82); c.fill(); c.strokeStyle = OUT; c.lineWidth = 2.2; c.stroke(); hairDots(c, hair, shape, 0, H - 16, 28, 18, 110, 0.75); c.strokeStyle = 'rgba(58,34,22,.55)'; c.lineWidth = 1.6; c.stroke(); hl(shape); return; }
   oFill(c, grad, 2.6);
   if (st === 'curly') {
     for (let i = 0; i < 9; i++) { const x = -22 + i * 5.5, y = H - 26 + Math.sin(i * 1.7) * 3; c.strokeStyle = shade(hair, 0.55); c.globalAlpha = 0.45; c.lineWidth = 1.3; c.beginPath(); c.arc(x, y, 3.6, 0.3, 5.2); c.stroke(); c.globalAlpha = 1; }
     for (let i = 0; i < 12; i++) { const a = Math.PI * (1.02 + i * 0.087), x = Math.cos(a) * 33, y = H - 2 + Math.sin(a) * 36; oPath(c, c => c.arc(x, y, 9.5, 0, 7)); oFill(c, i % 2 ? hair : shade(hair, 1.15), 2.2); c.strokeStyle = shade(hair, 0.55); c.globalAlpha = 0.5; c.lineWidth = 1.3; c.beginPath(); c.arc(x, y, 4.4, 0.5, 5); c.stroke(); c.globalAlpha = 1; }
-    hl(); return;
+    hl(shape); return;
   }
   let strands;
   if (o.fringe === 'side') strands = root(-9, H - 31).concat(hairFan(-9, H - 30, 14, H - 8, 16, 14, -0.2, 1.1, 6, 0.1));
@@ -293,7 +293,7 @@ function hairFront(c, f, H) {
   if (st === 'quiff') { const q = () => { c.beginPath(); c.moveTo(-18, H - 38); c.bezierCurveTo(-22, H - 68, 32, H - 70, 33, H - 36); c.bezierCurveTo(22, H - 47, 0, H - 49, -18, H - 38); c.closePath(); }; q(); oFill(c, oHair(c, hair, H - 62, H - 30), 2.6); hairStrands(c, hair, q, [[-12, H - 40, -8, H - 58, 4, H - 66], [-4, H - 40, 2, H - 58, 16, H - 64], [4, H - 40, 12, H - 56, 26, H - 58], [12, H - 40, 22, H - 52, 31, H - 46], [-16, H - 38, -16, H - 52, -6, H - 62], [20, H - 40, 27, H - 46, 32, H - 38]]); }
   if (st === 'ponytail') { c.fillStyle = '#d6232a'; c.beginPath(); c.ellipse(44, H - 4, 3.5, 6, 0.4, 0, 7); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.6; c.stroke(); }
   if (st === 'long' || st === 'bob') for (const d of [-1, 1]) { const L = st === 'long' ? 46 : 26, lock = () => { c.beginPath(); c.moveTo(d * 25, H - 8); c.bezierCurveTo(d * 36, H + 8, d * 35, H + L - 6, d * 30, H + L); c.bezierCurveTo(d * 24, H + L - 8, d * 24, H + 8, d * 21, H - 4); c.closePath(); }; lock(); oFill(c, oHair(c, hair, H - 8, H + L), 2.4); hairStrands(c, hair, lock, hairFlow(d * 22, d * 33, H - 6, H + L, 5, 1.2)); }
-  hl();
+  hl(shape);
 }
 
 /* ======================= VOORAANZICHT ======================= */
@@ -420,21 +420,21 @@ function hairSide(c, f, ph) {
 }
 function hairSideBody(c, f, ph) {
   const st = f.style, hair = f.hair; if (st === 'bald') return;
-  const grad = oHair(c, hair, -52, 6), hl = () => { c.strokeStyle = 'rgba(255,255,255,.38)'; c.lineWidth = 3; c.beginPath(); c.arc(-3, -2, 26, Math.PI * 1.15, Math.PI * 1.45); c.stroke(); };
+  const grad = oHair(c, hair, -52, 6), hl = (clipFn) => { c.save(); if (clipFn) { c.beginPath(); clipFn(); c.clip(); } c.strokeStyle = 'rgba(255,255,255,.38)'; c.lineWidth = 3; c.beginPath(); c.arc(-3, -2, 26, Math.PI * 1.15, Math.PI * 1.45); c.stroke(); c.restore(); };
   // haarmassa: haarlijn die terugwijkt bij de slaap, oor blijft vrij, onregelmatige pieken in de nek
   const cap = (v, fr, cover) => () => {
     c.beginPath(); c.moveTo(-2, 5); c.lineTo(-0.5, -6);
-    if (fr === 'back') { c.bezierCurveTo(1, -16, 8, -26, 15, -28); c.bezierCurveTo(19, -28, 22, -24, 24, -20); }
+    if (fr === 'back') { const d = v < -5 ? 5 : 0; c.bezierCurveTo(1, -16, 8, -26 + d, 14, -27 + d); c.bezierCurveTo(18, -27 + d, 21, -26 + d, d ? 22 : 24, d ? -26 : -20); }
     else if (fr === 'bangs') { c.bezierCurveTo(2, -14, 10, -17, 17, -17); c.bezierCurveTo(20, -17, 22.5, -15, 24, -13); }
     else { c.bezierCurveTo(1, -14, 8, -20, 14, -22); c.bezierCurveTo(18, -23, 21, -21, 23, -17); }
-    c.bezierCurveTo(27, -30, 20, -41 - v, 2, -41 - v); c.bezierCurveTo(-18, -42 - v, -30, -30, -28, -12);
+    c.bezierCurveTo(v < -5 ? 22 : 26, -30 - v * 0.55, 19, -41 - v, 2, -41 - v); c.bezierCurveTo(-18, -42 - v, -30, -30, -28, -12);
     c.bezierCurveTo(-28, -2, -27, 8, -23, 15); c.lineTo(-20, 10); c.lineTo(-17, 16); c.lineTo(-14, 10);
     if (cover) { c.lineTo(-10, 14); c.lineTo(-5, 11); } else { c.bezierCurveTo(-12, 8, -11, 3, -11, -1); c.bezierCurveTo(-10, -7, -5, -8, -3, -3); }
     c.closePath();
   };
   const ear = () => { oPath(c, c => c.ellipse(-5.5, 3, 4.4, 6.6, 0, 0, 7)); oFill(c, shade(f.skin, 0.95), 2.2); c.strokeStyle = shade(f.skin, 0.65); c.lineWidth = 1.2; c.beginPath(); c.arc(-5, 3, 2, 0.6, 5.4); c.stroke(); };
   if (st === 'mohawk') {
-    const sh = cap(-14, 'back'); c.beginPath(); sh(); c.globalAlpha = 0.45; c.fillStyle = hair; c.fill(); c.globalAlpha = 1; hairDots(c, hair, sh, -6, -14, 26, 18, 60, 0.7);
+    const sh = cap(-14, 'back'); c.beginPath(); sh(); c.fillStyle = shade(hair, 0.82); c.fill(); c.strokeStyle = OUT; c.lineWidth = 2.2; c.stroke(); hairDots(c, hair, sh, -6, -14, 26, 18, 60, 0.7);
     const sp = () => { c.beginPath(); c.moveTo(-24, -14); c.lineTo(-26, -40); c.lineTo(-16, -34); c.lineTo(-12, -56); c.lineTo(-4, -40); c.lineTo(2, -58); c.lineTo(8, -40); c.lineTo(16, -50); c.lineTo(14, -22); c.closePath(); };
     sp(); oFill(c, grad, 2.6); hairStrands(c, hair, sp, hairFlow(-22, 14, -58, -20, 9, 1.4)); sp(); c.strokeStyle = OUT; c.lineWidth = 2.6; c.stroke(); return;
   }
@@ -442,14 +442,14 @@ function hairSideBody(c, f, ph) {
   const cover = st === 'long' || st === 'bob' || st === 'afro' || st === 'curly', shape = cap(o[0], o[1], cover);
   if (st === 'bun') { const bun = () => { c.beginPath(); c.arc(-12, -44, 12, 0, 7); }; bun(); oFill(c, oHair(c, hair, -58, -32), 2.6); hairStrands(c, hair, bun, hairFan(-12, -44, -12, -44, 12, 12, 0, 6.2, 9, 0.5)); bun(); c.strokeStyle = OUT; c.lineWidth = 2.6; c.stroke(); }
   c.beginPath(); shape();
-  if (st === 'buzz') { c.globalAlpha = 0.5; c.fillStyle = hair; c.fill(); c.globalAlpha = 1; hairDots(c, hair, shape, -6, -16, 26, 20, 110, 0.75); c.strokeStyle = 'rgba(58,34,22,.55)'; c.lineWidth = 1.6; c.stroke(); hl(); return; }
+  if (st === 'buzz') { c.fillStyle = shade(hair, 0.82); c.fill(); c.strokeStyle = OUT; c.lineWidth = 2.2; c.stroke(); hairDots(c, hair, shape, -6, -16, 26, 20, 110, 0.75); c.strokeStyle = 'rgba(58,34,22,.55)'; c.lineWidth = 1.6; c.stroke(); hl(shape); return; }
   oFill(c, grad, 2.6);
   const flow = hairFan(-2, -34, 0, 0, 30, 33, Math.PI * 0.6, Math.PI * 1.75, 16, 0.12).concat(hairFan(10, -30, 6, -6, 22, 26, Math.PI * 1.55, Math.PI * 1.95, 5, 0.1));
   hairStrands(c, hair, shape, flow);
   if (st === 'quiff') { const q = () => { c.beginPath(); c.moveTo(-8, -32); c.bezierCurveTo(-10, -62, 28, -62, 29, -24); c.bezierCurveTo(22, -38, 6, -40, -8, -32); c.closePath(); }; q(); oFill(c, oHair(c, hair, -62, -30), 2.6); hairStrands(c, hair, q, [[-2, -34, 4, -52, 18, -58], [4, -34, 12, -52, 24, -52], [10, -34, 18, -48, 28, -40], [-6, -32, -2, -48, 8, -56], [16, -34, 24, -40, 29, -28]]); }
   if (st === 'curly') for (let i = 0; i < 10; i++) { const a = Math.PI * (0.66 + i * 0.1), x = -2 + Math.cos(a) * 25, y = -2 + Math.sin(a) * 28; oPath(c, c => c.arc(x, y, 9, 0, 7)); oFill(c, i % 2 ? hair : shade(hair, 1.15), 2.2); c.strokeStyle = shade(hair, 0.55); c.globalAlpha = 0.5; c.lineWidth = 1.3; c.beginPath(); c.arc(x, y, 4.2, 0.5, 5); c.stroke(); c.globalAlpha = 1; }
   if (st === 'afro') { c.save(); c.beginPath(); shape(); c.clip(); c.strokeStyle = shade(hair, 0.55); c.globalAlpha = 0.4; c.lineWidth = 1.3; for (let i = 0; i < 22; i++) { c.beginPath(); c.arc(-28 + (i % 7) * 8, -50 + Math.floor(i / 7) * 9, 3.4, 0.4, 5.3); c.stroke(); } c.restore(); }
-  hl();
+  hl(shape);
 }
 
 /* ======================= ZIJAANZICHT (rennen, springen, bukken) ======================= */
