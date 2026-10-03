@@ -9,6 +9,8 @@ Een renspel door een bruin café, in de stijl van Kaasje / de Chrome dino-game. 
 2. Open het bestand. Android vraagt eenmalig om het installeren van onbekende apps toe te staan voor je browser of bestanden-app.
 3. Open **Vrienden Run** en draai je telefoon op zijn kant.
 
+**Zegt je telefoon "App niet geïnstalleerd"?** Verwijder dan eerst de oude Vrienden Run-app (lang op het icoon drukken → Verwijderen) en installeer de nieuwste APK opnieuw. Eerdere bouwen waren met een andere sleutel ondertekend. Vanaf nu gebruikt elke bouw dezelfde sleutel (`keystore/`), dus nieuwe versies kun je gewoon over de oude heen installeren.
+
 De APK wordt automatisch gebouwd door GitHub (workflow *Android-app (APK)*) bij elke wijziging op de hoofdbranch. Je kunt hem ook handmatig starten via **Actions → Android-app (APK) → Run workflow**.
 
 ### iPhone en Android (webapp, geen download nodig)

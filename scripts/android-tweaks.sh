@@ -25,3 +25,29 @@ for pair in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
 done
 rm -rf "$RES/mipmap-anydpi-v26"   # zonder het adaptieve icoon gebruikt Android onze PNG's
 echo "Android-project aangepast."
+
+# Vaste ondertekening: elke bouw gebruikt dezelfde sleutel, zodat een nieuwe versie gewoon over de oude heen geïnstalleerd kan worden
+# (zonder dit krijg je "App niet geïnstalleerd"). Elke bouw krijgt ook een hoger versienummer.
+GRADLE=android/app/build.gradle
+python3 - "$GRADLE" <<'PY'
+import re, sys, os
+p = sys.argv[1]
+s = open(p).read()
+block = """android {
+    signingConfigs {
+        debug {
+            storeFile file("$rootDir/../keystore/vrienden.p12")
+            storePassword 'vrienden123'
+            keyAlias 'vriendenrun'
+            keyPassword 'vrienden123'
+            storeType 'pkcs12'
+        }
+    }
+"""
+s = re.sub(r'^android \{\n', block, s, count=1, flags=re.M)
+run = os.environ.get('GITHUB_RUN_NUMBER', '1')
+s = re.sub(r'versionCode \d+', 'versionCode ' + run, s, count=1)
+s = re.sub(r'versionName "[^"]*"', 'versionName "1.0.' + run + '"', s, count=1)
+open(p, 'w').write(s)
+print('Ondertekening ingesteld, versionCode', run)
+PY
