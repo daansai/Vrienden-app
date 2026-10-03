@@ -83,8 +83,6 @@ function renderRoster() {
 }
 
 /* ---------- poppetjes-maker ---------- */
-const TOPC = ['#3b82f6', '#e63946', '#2a9d8f', '#f4a261', '#ffffff', '#1d1d1f', '#8e44ad', '#f1c40f', '#6c757d', '#e84393', '#5dade2', '#7d6608'];
-const BOTC = ['#5b7fb5', '#2f4a7a', '#1c2a4a', '#1a1a1d', '#6b6f78', '#e8e8ea', '#b7a37a', '#59623a', '#8a4a2a'];
 const SHOEC = ['#f1f1f1', '#1a1a1d', '#8a4a2a', '#d6232a', '#2f4a7a', '#e8c547'];
 // Tabs met grote keuzeknoppen: sneller dan lange lijsten
 const SCHEMA = [
@@ -99,14 +97,22 @@ const SCHEMA = [
     { k: 'beard', t: 'chips', l: 'Baard en snor' }, { k: 'glasses', t: 'chips', l: 'Bril' }] },
   { sec: 'Haar', items: [{ k: 'style', t: 'chips', l: 'Kapsel' }, { k: 'hair', t: 'sw', l: 'Haarkleur', c: HAIR }] },
   { sec: 'Kleding', items: [
-    { k: 'top', t: 'chips', l: 'Bovenkant' }, { k: 'topColor', t: 'sw', l: 'Kleur bovenkant', c: TOPC, custom: true },
-    { k: 'bottom', t: 'chips', l: 'Onderkant' }, { k: 'bottomColor', t: 'sw', l: 'Kleur onderkant', c: BOTC, custom: true },
-    { k: 'shoes', t: 'sw', l: 'Schoenen', c: SHOEC, custom: true }, { k: 'hat', t: 'chips', l: 'Hoofddeksel' }] },
+    { k: 'top', t: 'chips', l: 'Bovenkant' }, { k: 'topColor', t: 'cloth', of: 'top', l: 'Stof en kleur bovenkant' },
+    { k: 'bottom', t: 'chips', l: 'Onderkant' }, { k: 'bottomColor', t: 'cloth', of: 'bottom', l: 'Stof en kleur onderkant' },
+    { k: 'shoes', t: 'sw', l: 'Schoenen', c: SHOEC }, { k: 'hat', t: 'chips', l: 'Hoofddeksel' }] },
   { sec: 'Foto', items: [] }
 ];
 let draft = null, editingNew = false, edPose = 'run', activeTab = 'Basis';
 const controls = {}, panes = {};
 
+const SW_CACHE = {};
+function swatchURL(fab, col) { // klein stukje stof als keuzeknop
+  const key = fab + col; if (SW_CACHE[key]) return SW_CACHE[key];
+  const cv = document.createElement('canvas'); cv.width = cv.height = 40; const g = cv.getContext('2d'); g.scale(2.5, 2.5);
+  g.fillStyle = fabric(fab, col); g.fillRect(0, 0, 16, 16); g.setTransform(1, 0, 0, 1, 0, 0);
+  const gr = g.createLinearGradient(0, 0, 40, 40); gr.addColorStop(0, 'rgba(255,255,255,.22)'); gr.addColorStop(1, 'rgba(0,0,0,.22)'); g.fillStyle = gr; g.fillRect(0, 0, 40, 40);
+  return SW_CACHE[key] = cv.toDataURL();
+}
 function buildForm() {
   const form = $('form'); form.innerHTML = '';
   const bar = document.createElement('div'); bar.className = 'tabs';
@@ -121,11 +127,11 @@ function buildForm() {
       else if (it.t === 'rng') { el = document.createElement('input'); el.type = 'range'; el.min = 0; el.max = 100; el.step = 1; el.addEventListener('input', () => { draft[it.k] = +el.value; }); }
       else if (it.t === 'chips') {
         el = document.createElement('div'); el.className = 'chips';
-        OPT[it.k].forEach(([v, n]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.v = v; b.textContent = n; b.onclick = () => { draft[it.k] = v; syncForm(); }; el.appendChild(b); });
-      } else {
+        OPT[it.k].forEach(([v, n]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.v = v; b.textContent = n; b.onclick = () => { draft[it.k] = v; snapCloth(draft); syncForm(); }; el.appendChild(b); });
+      } else if (it.t === 'cloth') { el = document.createElement('div'); el.className = 'sw cloth'; }
+      else {
         el = document.createElement('div'); el.className = 'sw';
         it.c.forEach(col => { const b = document.createElement('button'); b.type = 'button'; b.className = 'dot'; b.style.background = col; b.dataset.c = col; b.setAttribute('aria-label', col); b.onclick = () => { draft[it.k] = col; syncForm(); }; el.appendChild(b); });
-        if (it.custom) { const ci = document.createElement('input'); ci.type = 'color'; ci.className = 'cust'; ci.title = 'Eigen kleur'; ci.addEventListener('input', () => { draft[it.k] = ci.value; syncForm(); }); el.appendChild(ci); }
       }
       el.id = 'f_' + it.k;
       if (it.t === 'text' || it.t === 'rng') el.addEventListener('input', syncForm);
@@ -148,10 +154,18 @@ function showTab(n) {
 function syncForm() {
   for (const [k, { el, it }] of Object.entries(controls)) {
     if (it.t === 'chips') el.querySelectorAll('.chip').forEach(b => b.classList.toggle('sel', b.dataset.v === String(draft[k])));
-    else if (it.t === 'sw') {
+    else if (it.t === 'cloth') {
+      const fabK = it.of === 'top' ? 'topFab' : 'bottomFab', list = CLOTH[draft[it.of]] || [], sig = draft[it.of];
+      if (el.dataset.of !== sig) { // andere kledingsoort: andere opties
+        el.dataset.of = sig; el.innerHTML = '';
+        list.forEach(([n, col, fab]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'dot cloth'; b.style.backgroundImage = `url(${swatchURL(fab, col)})`; b.dataset.c = col; b.dataset.f = fab; b.title = n; b.setAttribute('aria-label', n); b.onclick = () => { draft[it.k] = col; draft[fabK] = fab; syncForm(); }; el.appendChild(b); });
+        const cap = document.createElement('div'); cap.className = 'cname'; el.appendChild(cap);
+      }
+      el.querySelectorAll('.dot').forEach(b => b.classList.toggle('sel', b.dataset.c === draft[k] && b.dataset.f === draft[fabK]));
+      const cur = list.find(x => x[1] === draft[k] && x[2] === draft[fabK]); el.querySelector('.cname').textContent = cur ? cur[0] : '';
+    } else if (it.t === 'sw') {
       const cur = String(draft[k]).toLowerCase();
       el.querySelectorAll('.dot').forEach(b => b.classList.toggle('sel', b.dataset.c.toLowerCase() === cur));
-      const ci = el.querySelector('.cust'); if (ci && /^#[0-9a-f]{6}$/i.test(cur)) ci.value = cur;
     } else if (String(el.value) !== String(draft[k])) el.value = draft[k];
   }
   const dress = draft.top === 'dress'; // bij een jurk past geen aparte onderkant
@@ -164,10 +178,12 @@ function randomize() {
     skin: pick(SKIN), eyes: pick(EYES), hair: pick(HAIR.slice(0, 9)),
     style: pick(fem ? ['long', 'bob', 'ponytail', 'bun', 'braid', 'curly', 'short'] : ['short', 'buzz', 'quiff', 'curly', 'afro', 'bald', 'mohawk']),
     beard: fem ? 'none' : pick(['none', 'none', 'stubble', 'moustache', 'beard']), glasses: pick(['none', 'none', 'none', 'round', 'square', 'sun']),
-    top: fem ? pick(['tshirt', 'long', 'hoodie', 'tank', 'dress', 'blazer']) : pick(['tshirt', 'long', 'hoodie', 'blazer', 'tank']), topColor: pick(TOPC),
-    bottom: fem ? pick(['jeans', 'chinos', 'shorts', 'skirt']) : pick(['jeans', 'jeans', 'chinos', 'shorts']), bottomColor: pick(BOTC), shoes: pick(SHOEC),
+    top: fem ? pick(['tshirt', 'long', 'hoodie', 'tank', 'dress', 'blazer']) : pick(['tshirt', 'long', 'hoodie', 'blazer', 'tank']),
+    bottom: fem ? pick(['jeans', 'chinos', 'shorts', 'skirt']) : pick(['jeans', 'jeans', 'chinos', 'shorts']), shoes: pick(SHOEC),
     hat: pick(['none', 'none', 'none', 'cap', 'beanie']), hump: pick([0, 0, 0, 10, 25]), chest: 35 + (Math.random() * 30 | 0), belly: 30 + (Math.random() * 40 | 0), butt: 35 + (Math.random() * 30 | 0)
   });
+  const tp = pick(CLOTH[draft.top]), bp = pick(CLOTH[draft.bottom] || CLOTH.jeans);
+  draft.topColor = tp[1]; draft.topFab = tp[2]; draft.bottomColor = bp[1]; draft.bottomFab = bp[2];
   draft.face = ''; photoImg = null; syncForm();
 }
 function openEditor(f) {
@@ -1511,7 +1527,7 @@ function renderScene(ts) {
     ctx.fillText({ 1: 'Pak flesjes om je bier leeg te drinken', 2: 'Pak wijnglazen om je wijn leeg te drinken', 3: 'Pak cocktails om je cocktail leeg te drinken' }[mode] + ' · shotjes vullen weer bij', W / 2, 85);
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
-  if (state === 'play') { ctx.fillStyle = '#ffc933'; ctx.font = 'bold 14px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(player.f.name, player.x, player.y - 134 * ({ short: .94, normal: 1, tall: 1.05 }[player.f.height] || 1)); ctx.textAlign = 'left'; }
+  if (state === 'play') { ctx.fillStyle = '#ffc933'; ctx.font = 'bold 14px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(player.f.name, player.x, player.y - 146 * ({ short: .94, normal: 1, tall: 1.05 }[player.f.height] || 1)); ctx.textAlign = 'left'; }
   for (const p of popups) { ctx.globalAlpha = 1 - p.t / 1.1; ctx.fillStyle = p.color; ctx.font = 'bold 15px Nunito, system-ui, sans-serif'; ctx.fillText(p.text, p.x, p.y - p.t * 30); ctx.globalAlpha = 1; }
   for (const p of confetti) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-4, -2, 8, 4); ctx.restore(); }
 }

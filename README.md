@@ -30,7 +30,7 @@ De webapp werkt daarna ook zonder internet.
 - **Bonuswerelden (250 meter):** spring in het open vat (kelder, brouwerij of cocktailbar) of ren door de achterdeur (tarweveld, druivenveld of fruitplantage). Elke omgeving heeft eigen tafels, lampen, kratten en meer.
 - **Afwisseling:** dansvloer met discobal elke 150 m, lange tafels om op te springen, verkeerspaaltjes.
 - **Achtervolgers:** beveiliger, boze vrouw, dikke man in onderbroek, vader en moeder ("Je zou vanavond niet dronken worden!"). Ze ontwijken eerst een paar obstakels voordat ze struikelen.
-- **Poppetjes-maker (cartoon-stijl: groot hoofd, dikke omlijning, vooraanzicht in menu's en zijaanzicht in het spel):** tabs met keuzeknoppen en een 🎲-knop. Man/vrouw, lengte, postuur, houding, bochel, borst, buik, billen, huid, ogen, kapsel, baard, bril, kleding met echte stoffen (denim, jersey, tricot, fleece, wol), schoenen, hoofddeksel en een foto van je eigen gezicht (blijft alleen op je apparaat).
+- **Poppetjes-maker (cartoon-stijl: groot hoofd, dikke omlijning, vooraanzicht in menu's en zijaanzicht in het spel):** tabs met keuzeknoppen en een 🎲-knop. Man/vrouw, lengte, postuur, houding, bochel, borst, buik, billen, huid, ogen, kapsel, baard, bril, kleding uit vaste opties per kledingstuk (kleur en stof horen bij elkaar: o.a. raw denim, stonewash, melange, Breton-streep, tweed, krijtstreep, ruitjes, bloemenprint), realistischer haar met haarlijn, scheiding en strengen, schoenen, hoofddeksel en een foto van je eigen gezicht (blijft alleen op je apparaat).
 
 ## Besturing
 ↑ / spatie = springen (langer ingedrukt = hoger en verder), ↓ = bukken, Esc = hoofdmenu. Touchscreen: rechter helft = springen (vasthouden = hoger), linker helft = bukken. In de lucht bukken laat je meteen naar beneden gaan.

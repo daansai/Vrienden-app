@@ -167,3 +167,7 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
   .card-over h1{font-size:28px}
   .drink,.sips{padding:4px 10px}
 }
+
+.dot.cloth{width:30px;height:30px;border-radius:8px;background-size:cover;background-position:center}
+.sw.cloth{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cname{flex-basis:100%;font-size:12px;color:#e9c88a;min-height:15px}
