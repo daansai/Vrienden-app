@@ -44,6 +44,18 @@ if (!chosen.length) chosen = [friends[0].id];
 function saveAll() { store.set('friends', friends); store.set('selected', selectedId); store.set('chosen', chosen); }
 const esc = t => String(t).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
+// Past het hoofdmenu altijd precies op het scherm: te groot? Dan verkleinen we het (nooit scrollen).
+function fitMenu() {
+  const menu = $('menu'), box = $('menuBox'); if (!menu || !box || menu.classList.contains('hidden')) return;
+  box.style.zoom = '1';
+  const cs = getComputedStyle(menu);
+  const availH = menu.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const availW = menu.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const sc = Math.min(1, availH / box.offsetHeight, availW / box.offsetWidth);
+  box.style.zoom = String(Math.max(0.42, sc * 0.98));
+}
+addEventListener('resize', fitMenu); addEventListener('orientationchange', () => setTimeout(fitMenu, 200));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitMenu);
 function renderRoster() {
   const r = $('roster'); r.innerHTML = '';
   for (const f of friends) {
@@ -64,6 +76,7 @@ function renderRoster() {
   $('best').textContent = (b1 || b2 || b3) ? `Highscores (${D().name}): 🍺 ${b1} m · 🍷 ${b2} m · 🍹 ${b3} m` : '';
   document.querySelectorAll('#diffs .chip').forEach(b => b.classList.toggle('sel', b.dataset.diff === diff));
   $('diffHint').textContent = D().hint;
+  fitMenu();
 }
 
 /* ---------- poppetjes-maker ---------- */
@@ -161,7 +174,7 @@ function openEditor(f) {
   $('menu').classList.add('hidden'); $('editor').classList.remove('hidden');
   $('btnDelete').style.display = f && friends.length > 1 ? '' : 'none';
 }
-function closeEditor() { $('editor').classList.add('hidden'); $('menu').classList.remove('hidden'); }
+function closeEditor() { $('editor').classList.add('hidden'); $('menu').classList.remove('hidden'); fitMenu(); }
 $('btnNew').onclick = () => openEditor(null);
 $('btnCancel').onclick = closeEditor;
 $('btnSave').onclick = () => {
@@ -247,7 +260,7 @@ let state = 'menu', player, obstacles = [], items = [], speed = 330, score = 0, 
 let dust = [], motes = Array.from({ length: 34 }, (_, i) => ({ x: (i * 97) % 800, y: 30 + (i * 53) % 280, r: 0.8 + (i % 3) * 0.5, v: 4 + i % 5, p: i })), shake = 0, wasAir = false, dustT = 0, nextMile = 100;
 let level = 1, dispLevel = 1, pulse = 0, popups = [], confetti = [], overShown = false, hintT = 0;
 let nextDoorAt = 320, goldIn = 12, sips = 0, GOLDMODE = false, bonus = null, bonusKind = 'wine', bonusBlend = 0, flash = 0, flashCol = '#fff', nextVatAt = 200, finishObj = null, finT = 0, drunk = 0, shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
-const input = { duck: false }; let jumpHeld = false;
+const input = { duck: false }; let jumpHeld = false, keyJump = false, holdT = 0;
 const rnd = (a, b) => a + Math.random() * (b - a);
 // de beveiliger: een grote kerel in het zwart
 const BOUNCER = normalize({ id: -1, name: 'Beveiliger', gender: 'm', height: 'tall', build: 'broad', skin: SKIN[3], eyes: EYES[5], style: 'bald', hair: HAIR[0], beard: 'stubble', glasses: 'sun', top: 'blazer', topColor: '#15151c', bottom: 'chinos', bottomColor: '#15151c', shoes: '#0a0a0a', chest: 78, belly: 72, butt: 60, posture: 'upright' });
@@ -297,9 +310,9 @@ function prepareTurn() {
 }
 function beginRun() { $('over').classList.add('hidden'); state = 'play'; }
 function goHome() {
-  state = 'menu'; session = null; $('over').classList.add('hidden'); $('menu').classList.remove('hidden'); best = store.get(bestKey(), 0); renderRoster();
+  state = 'menu'; session = null; $('over').classList.add('hidden'); $('menu').classList.remove('hidden'); best = store.get(bestKey(), 0); renderRoster(); fitMenu();
 }
-function jump() { if (state === 'play' && player.on) player.vy = -820; }
+function jump() { if (state === 'play' && player.on) { player.vy = -800; holdT = 0; } }
 function playerBox() {
   const h = player.duck && player.on ? 62 : 90;
   return { x: player.x - 12, y: player.y - h, w: 24, h };
@@ -411,13 +424,16 @@ function showResult(kind) {
 function stepPhysics(dt, fastFall) {
   const prev = player.y;
   if (fastFall && !player.on) player.vy = Math.max(player.vy, 1100); // bukken in de lucht: meteen omlaag
-  player.vy += 2300 * dt;
+  // variabel springen: kort tikken = gewone sprong, vasthouden = langer omhoog (tot 0,4 s) en dus hoger en verder
+  let g = 2300;
+  if (player.vy < 0 && state === 'play') { if ((jumpHeld || keyJump) && holdT < 0.4) { g = 1250; holdT += dt; } else g = 2500; }
+  player.vy += g * dt;
   player.y += player.vy * dt;
   let land = GROUND;
   if (player.vy >= 0) for (const o of obstacles) {
     if (o.type === 'table' && player.x - 12 < o.x + o.w - 4 && player.x + 12 > o.x + 4 && prev <= o.y + 14 && player.y >= o.y) land = Math.min(land, o.y);
   }
-  if (player.y >= land) { player.y = land; player.vy = 0; player.on = true; } else player.on = false;
+  if (player.y >= land) { player.y = land; player.vy = 0; player.on = true; holdT = 0; } else player.on = false;
 }
 function updateBouncer(dt) {
   const b = bouncer; if (!b) return;
@@ -1474,11 +1490,12 @@ const JUMP = ['ArrowUp', 'Space', 'KeyW'], DUCK = ['ArrowDown', 'KeyS'];
 const ended = () => state === 'over' || state === 'ready' || ((state === 'won' || state === 'finished') && overShown);
 addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-  if (JUMP.includes(e.code)) { e.preventDefault(); if (!e.repeat) { if (ended()) primary(); else jump(); } }
+  if (JUMP.includes(e.code)) { e.preventDefault(); keyJump = true; if (!e.repeat) { if (ended()) primary(); else jump(); } }
   if (DUCK.includes(e.code)) { e.preventDefault(); input.duck = true; }
   if (e.code === 'Escape' && state !== 'menu') goHome();
 });
-addEventListener('keyup', e => { if (DUCK.includes(e.code)) input.duck = false; });
+addEventListener('keyup', e => { if (DUCK.includes(e.code)) input.duck = false; if (JUMP.includes(e.code)) keyJump = false; });
+addEventListener('blur', () => { keyJump = false; input.duck = false; });
 
 function pointerPos(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; }
 const active = new Map();

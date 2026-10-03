@@ -125,7 +125,8 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 
 /* --- hoofdmenu: telefoon liggend, past zonder scrollen --- */
 @media (max-height:540px) and (orientation:landscape){
-  #menu{flex-direction:row;align-items:center;justify-content:center;gap:12px 26px;padding:6px 14px;overflow:hidden}
+  #menu{padding:6px 14px;overflow:hidden}
+  #menu #menuBox{flex-direction:row;align-items:center;justify-content:center;gap:12px 26px}
   .menu-left,.menu-right{display:flex;flex-direction:column;align-items:center;gap:6px}
   .menu-left{flex:0 1 36%;min-width:0}
   .menu-right{flex:1 1 58%;min-width:0;gap:8px}
@@ -154,3 +155,6 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
   .card canvas{height:92px;width:auto}
   .logo{font-size:clamp(30px,11vw,48px)}
 }
+
+/* menu-doos: schaalt zichzelf (zie fitMenu) */
+#menuBox{display:flex;flex-direction:column;align-items:center;gap:10px;margin:auto;max-width:100%}

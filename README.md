@@ -31,7 +31,7 @@ De webapp werkt daarna ook zonder internet.
 - **Poppetjes-maker:** tabs met keuzeknoppen en een 🎲-knop. Man/vrouw, lengte, postuur, houding, bochel, borst, buik, billen, huid, ogen, kapsel, baard, bril, kleding met echte stoffen (denim, jersey, tricot, fleece, wol), schoenen, hoofddeksel en een foto van je eigen gezicht (blijft alleen op je apparaat).
 
 ## Besturing
-↑ / spatie = springen, ↓ = bukken, Esc = hoofdmenu. Touchscreen: rechter helft = springen, linker helft = bukken. In de lucht bukken laat je meteen naar beneden gaan.
+↑ / spatie = springen (langer ingedrukt = hoger en verder), ↓ = bukken, Esc = hoofdmenu. Touchscreen: rechter helft = springen (vasthouden = hoger), linker helft = bukken. In de lucht bukken laat je meteen naar beneden gaan.
 
 ## Zelf bouwen
 - Webversie: open `index.html` in een browser of serveer de map (`python3 -m http.server`).
