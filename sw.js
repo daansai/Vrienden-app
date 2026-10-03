@@ -1,5 +1,5 @@
 // Service worker: het spel werkt ook zonder internet nadat je het één keer hebt geopend.
-const CACHE = 'vrienden-run-v8';
+const CACHE = 'vrienden-run-v9';
 const ASSETS = ['./', 'index.html', 'style.css', 'character.js', 'game.js', 'manifest.webmanifest',
   'icons/icon-32.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
