@@ -38,7 +38,7 @@ let best = store.get(bestKey(), 0);
 const MODES = {
   1: { name: 'Bierflesjes', base: 330, grow: 9, max: 780, drain: 0.02, refill: 0.08 },
   3: { name: 'Cocktails', base: 330, grow: 9, max: 780, drain: 0.012, refill: 0.08 }, // zelfde tempo als bier, maar er gaat veel minder uit het glas
-  2: { name: 'Wijnglazen', base: 330, grow: 9, max: 780, drain: 0.045, refill: 0.04 } // zelfde tempo als bier; wijn is sterker, dus het glas gaat sneller leeg
+  2: { name: 'Wijnglazen', base: 330, grow: 9, max: 780, drain: 0.032, refill: 0.04 } // wijn is sterker, dus het glas gaat iets sneller leeg dan bij bier
 };
 
 /* ---------- menu & spelers ---------- */
