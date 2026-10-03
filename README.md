@@ -21,7 +21,7 @@ De APK wordt automatisch gebouwd door GitHub (workflow *Android-app (APK)*) bij 
 De webapp werkt daarna ook zonder internet.
 
 ## Het spel
-- **Bier, wijn of cocktail:** elk poppetje kiest wat het drinkt. Bier: groene flesjes. Wijn: wijnglazen, het glas loopt sneller leeg en een shotje vult er weinig van bij. Cocktail: loopt het langzaamst leeg.
+- **Bier, wijn of cocktail:** elk poppetje kiest wat het drinkt. Bier: groene flesjes. Wijn: wijnglazen, het glas loopt even snel leeg als bij bier, maar een shotje vult er iets minder van bij. Cocktail: loopt het langzaamst leeg.
 - **Shotjes** vullen je glas weer een beetje bij (elk derde shotje vult het hele glas) en maken je wazig en wankelig.
 - **Glas leeg = gewonnen.** Haal je de **3000 meter** of val je flauw, dan moet je opdrinken wat er nog in je glas zit.
 - **Gouden drankje:** vliegt vaak sneller voorbij (ongeveer elke 6 tot 11 seconden). Elke pak telt als één slok om aan het einde uit te delen.
