@@ -278,7 +278,7 @@ $('btnHome').onclick = () => goHome();
 let state = 'menu', player, obstacles = [], items = [], speed = 330, score = 0, itemCount = 0, spawnIn = 1, time = 0, phase = 0, faintT = 0, wonT = 0, lastT;
 let dust = [], motes = Array.from({ length: 34 }, (_, i) => ({ x: (i * 97) % 800, y: 30 + (i * 53) % 280, r: 0.8 + (i % 3) * 0.5, v: 4 + i % 5, p: i })), shake = 0, wasAir = false, dustT = 0, nextMile = 100;
 let level = 1, dispLevel = 1, pulse = 0, popups = [], confetti = [], overShown = false, hintT = 0;
-let nextDoorAt = 320, goldIn = 12, sips = 0, GOLDMODE = false, bonus = null, bonusKind = 'wine', bonusBlend = 0, flash = 0, flashCol = '#fff', nextVatAt = 200, finishObj = null, finT = 0, drunk = 0, shotCount = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
+let nextDoorAt = 320, goldIn = 12, sips = 0, GOLDMODE = false, bonus = null, bonusKind = 'wine', bonusBlend = 0, flash = 0, flashCol = '#fff', nextVatAt = 200, finishObj = null, finT = 0, drunk = 0, shotCount = 0, shotFullAt = 0, bouncer = null, bouncerIn = 22, zone = 0, zoneBlend = 0, session = null, primary = () => {};
 const input = { duck: false }; let jumpHeld = false, keyJump = false, holdT = 0;
 const rnd = (a, b) => a + Math.random() * (b - a);
 // de beveiliger: een grote kerel in het zwart
@@ -308,7 +308,7 @@ function initRun(f) {
   obstacles = []; items = []; popups = []; confetti = []; dust = [];
   speed = MODES[mode].base * D().speed; score = 0; itemCount = 0; spawnIn = 1; time = 0; phase = 0; faintT = 0; wonT = 0;
   level = 1; dispLevel = 1; pulse = 0; overShown = false; hintT = 0; shake = 0; wasAir = false; nextMile = 100;
-  drunk = 0; bonus = null; bonusBlend = 0; flash = 0; nextVatAt = rnd(150, 300); nextDoorAt = rnd(300, 450); shotCount = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28) * D().chase; goldIn = rnd(3, 6) * D().gold; sips = 0; zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
+  drunk = 0; bonus = null; bonusBlend = 0; flash = 0; nextVatAt = rnd(150, 300); nextDoorAt = rnd(300, 450); shotCount = 0; shotFullAt = 0; finishObj = null; bouncer = null; bouncerIn = rnd(18, 28) * D().chase; goldIn = rnd(3, 6) * D().gold; sips = 0; zone = 0; zoneBlend = 0; bgX = 0; state = 'ready';
 }
 // Past de uitslagkaart (na verliezen of winnen) altijd in beeld, zodat je de knoppen kunt bereiken
 function fitOver() {
@@ -396,7 +396,7 @@ function collect(c) {
     drunk = Math.min(8, drunk + 4.5); pop('Hik!', player.x - 10, player.y - 120, '#ffb3e6'); // een shotje maakt je wazig en wankelig
     shotCount++;
     if (shotCount % 3 === 0) { // easteregg: elk derde shotje vult het hele glas
-      level = 1; pulse = 1.4; pop('JACKPOT! Glas weer helemaal vol!', 110, 100, '#ffd43b');
+      shotFullAt = performance.now(); level = 1; pulse = 1.4; pop('JACKPOT! Glas weer helemaal vol!', 110, 100, '#ffd43b');
       for (let i = 0; i < 40; i++) confetti.push({ x: rnd(0, W), y: rnd(-120, 0), vx: rnd(-40, 40), vy: rnd(120, 260), r: rnd(0, 6), c: ['#ffc933', '#ff6b6b', '#4dabf7', '#69db7c', '#f783ac'][i % 5], loop: false });
     } else { level = Math.min(1, level + M.refill); pulse = 0.7; pop('Bijgevuld!', 62, 56, '#7ee08a'); }
   } else {
@@ -1435,7 +1435,21 @@ function drawHUD() {
   ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.roundRect(BADGE.x + 8, 57, 250, 8, 4); ctx.fill();
   ctx.fillStyle = '#ffc933'; ctx.beginPath(); ctx.roundRect(BADGE.x + 8, 57, Math.max(8, 250 * pr), 8, 4); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = '700 11px Nunito, system-ui, sans-serif'; ctx.textBaseline = 'middle'; ctx.fillText('🏁 ' + FINISH + ' m', BADGE.x + 262, 62);
+  drawShotCounter();
   drawGlassHUD();
+}
+function drawShotCounter() { // teller rechtsboven: 3 shotjes = glas weer helemaal vol (daarna begint hij opnieuw)
+  const full = performance.now() - shotFullAt < 1300, n = full ? 3 : shotCount % 3, x = W - 128, y = 40, w = 112, h = 30;
+  pill(x, y, w, h);
+  ctx.save(); ctx.translate(x + 17, y + h / 2); // shotglaasje
+  ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.strokeStyle = '#fff4d6'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-6, -8); ctx.lineTo(6, -8); ctx.lineTo(4.5, 8); ctx.lineTo(-4.5, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = full ? '#ffd43b' : '#ff6b8a'; ctx.beginPath(); ctx.moveTo(-5, -2); ctx.lineTo(5, -2); ctx.lineTo(4.4, 7); ctx.lineTo(-4.4, 7); ctx.closePath(); ctx.fill(); ctx.restore();
+  for (let i = 0; i < 3; i++) {
+    const cx = x + 46 + i * 20, cy = y + h / 2, on = i < n;
+    ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 7); ctx.fillStyle = on ? (full ? '#ffd43b' : '#ff6b8a') : 'rgba(0,0,0,.45)'; ctx.fill();
+    ctx.lineWidth = 1.8; ctx.strokeStyle = on ? '#fff4d6' : 'rgba(255,244,214,.35)'; ctx.stroke();
+    if (on) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(cx - 2.2, cy - 2.4, 2, 0, 7); ctx.fill(); }
+  }
 }
 const buttons = [{ key: 'duck', x: 20, y: H - 84, w: 70, h: 64 }, { key: 'jump', x: W - 90, y: H - 84, w: 70, h: 64 }];
 function crownPath(cx, cy, r, n = 21) { // kroonkurk: golvende rand
