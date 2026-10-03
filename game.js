@@ -1422,21 +1422,49 @@ function drawHUD() {
   drawGlassHUD();
 }
 const buttons = [{ key: 'duck', x: 20, y: H - 84, w: 70, h: 64 }, { key: 'jump', x: W - 90, y: H - 84, w: 70, h: 64 }];
-function drawButtons() { // minimalistische bierviltjes met een pijl, kleur volgt je drankje
-  const acc = { 1: ['#d4a017', '#5a3a08'], 2: ['#9a2a4a', '#4a0f22'], 3: ['#e0558f', '#6a1a3a'] }[mode] || ['#d4a017', '#5a3a08'];
+function crownPath(cx, cy, r, n = 21) { // kroonkurk: golvende rand
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a0 = (i / n) * Math.PI * 2, a1 = ((i + 0.5) / n) * Math.PI * 2, a2 = ((i + 1) / n) * Math.PI * 2;
+    if (i === 0) ctx.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+    ctx.quadraticCurveTo(cx + Math.cos(a1) * (r + 4.5), cy + Math.sin(a1) * (r + 4.5), cx + Math.cos(a2) * r, cy + Math.sin(a2) * r);
+  }
+  ctx.closePath();
+}
+function drawButtons() { // minimalistische knoppen in het thema van je drankje: bierdopje, kurk of rietjes
   for (const b of buttons) {
     const on = b.key === 'duck' ? input.duck : (jumpHeld || keyJump), up = b.key === 'jump';
-    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = 33 * (on ? 0.92 : 1);
-    ctx.save(); ctx.globalAlpha = on ? 0.96 : 0.8;
-    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.arc(cx + 1, cy + 3, r, 0, 7); ctx.fill();
-    const g = ctx.createRadialGradient(cx - 8, cy - 10, 4, cx, cy, r); g.addColorStop(0, on ? '#ffe3a0' : '#f8ecd0'); g.addColorStop(1, on ? '#e8b04a' : '#d8c08e');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
-    ctx.strokeStyle = acc[0]; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, r - 1.5, 0, 7); ctx.stroke();
-    ctx.setLineDash([2, 5]); ctx.strokeStyle = 'rgba(90,58,30,.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, r - 7, 0, 7); ctx.stroke(); ctx.setLineDash([]);
-    ctx.strokeStyle = acc[1]; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
-    if (up) { ctx.moveTo(cx - 12, cy + 2); ctx.lineTo(cx, cy - 8); ctx.lineTo(cx + 12, cy + 2); } else { ctx.moveTo(cx - 12, cy - 8); ctx.lineTo(cx, cy + 2); ctx.lineTo(cx + 12, cy - 8); }
-    ctx.stroke();
-    ctx.fillStyle = acc[1]; ctx.globalAlpha *= 0.85; ctx.font = '800 9px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(up ? 'SPRING' : 'BUK', cx, cy + 16);
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = 30 * (on ? 0.92 : 1);
+    ctx.save(); ctx.globalAlpha = on ? 0.97 : 0.84; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.arc(cx + 1, cy + 3, r + 2, 0, 7); ctx.fill();
+    let ink = '#4a2a14', label = true;
+    if (mode === 1) { // bierdopje
+      const g = ctx.createRadialGradient(cx - 9, cy - 11, 3, cx, cy, r + 4); g.addColorStop(0, on ? '#fff0a8' : '#ffe27a'); g.addColorStop(0.6, on ? '#f0b830' : '#e0a424'); g.addColorStop(1, '#a8740c');
+      crownPath(cx, cy, r); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = '#7a5208'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r - 6, 0, 7); ctx.strokeStyle = 'rgba(122,82,8,.65)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r - 8.5, 0, 7); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.2; ctx.stroke();
+      ink = '#5a1a0a';
+    } else if (mode === 2) { // kurk
+      const g = ctx.createRadialGradient(cx - 8, cy - 10, 3, cx, cy, r); g.addColorStop(0, on ? '#e8c48a' : '#dcb678'); g.addColorStop(1, on ? '#b88a4c' : '#a87a42');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill(); ctx.strokeStyle = '#6a4824'; ctx.lineWidth = 2; ctx.stroke();
+      for (let i = 0; i < 22; i++) { const an = i * 2.4, rd = ((i * 37) % 100) / 100 * (r - 7); ctx.fillStyle = i % 3 ? 'rgba(90,58,28,.5)' : 'rgba(255,235,200,.45)'; ctx.beginPath(); ctx.ellipse(cx + Math.cos(an) * rd, cy + Math.sin(an) * rd, 1.4 + (i % 3) * 0.8, 1 + (i % 2), an, 0, 7); ctx.fill(); }
+      ctx.beginPath(); ctx.arc(cx, cy, r - 5, 0, 7); ctx.strokeStyle = 'rgba(138,28,64,.45)'; ctx.lineWidth = 2.5; ctx.stroke(); // wijnrand
+      ink = '#4a0f22';
+    } else { // rietjesspiraal
+      const turns = 3.2, k = (r - 6) / (turns * Math.PI * 2);
+      const spiral = () => { ctx.beginPath(); for (let t = 0; t <= turns * Math.PI * 2; t += 0.12) { const rr = 3 + k * t; const px = cx + Math.cos(t) * rr, py = cy + Math.sin(t) * rr; if (t === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); } };
+      ctx.fillStyle = on ? '#ffe3ee' : '#fff4f8'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+      spiral(); ctx.strokeStyle = 'rgba(120,30,70,.35)'; ctx.lineWidth = 9.5; ctx.stroke();
+      spiral(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 7.5; ctx.stroke();
+      spiral(); ctx.setLineDash([5, 5]); ctx.strokeStyle = on ? '#ff3d81' : '#e8467f'; ctx.lineWidth = 7.5; ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(cx, cy, r - 0.5, 0, 7); ctx.strokeStyle = 'rgba(120,30,70,.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+      ink = '#5a0f33'; label = false;
+    }
+    // pijl (met lichte rand zodat hij op elk patroon leesbaar blijft)
+    const arrow = () => { ctx.beginPath(); if (up) { ctx.moveTo(cx - 12, cy + 3); ctx.lineTo(cx, cy - 8); ctx.lineTo(cx + 12, cy + 3); } else { ctx.moveTo(cx - 12, cy - 8); ctx.lineTo(cx, cy + 3); ctx.lineTo(cx + 12, cy - 8); } };
+    if (mode === 3) { arrow(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 11; ctx.stroke(); }
+    arrow(); ctx.strokeStyle = ink; ctx.lineWidth = 6; ctx.stroke();
+    if (label) { ctx.fillStyle = ink; ctx.globalAlpha *= 0.85; ctx.font = '800 9px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(up ? 'SPRING' : 'BUK', cx, cy + 16); }
     ctx.restore();
   }
 }
